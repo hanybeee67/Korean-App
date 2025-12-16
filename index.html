@@ -215,18 +215,34 @@
             state.categories = ['All', ...uniqueCats];
         }
 
+        // Category Translations (Korean -> Nepali)
+        const CATEGORY_TRANSLATIONS = {
+            '인사/입장': '인사/입장 (स्वागत/Greeting)',
+            '자리/안내': '자리/안내 (सिट/Seat)',
+            '주문': '주문 (अर्डर/Order)',
+            '서빙': '서빙 (सर्भिस/Serving)',
+            '계산': '계산 (बिल/Bill)',
+            '기타': '기타 (अन्य/Other)'
+        };
+
         // Rendering Categories (Dropdown Logic)
         function renderCategories() {
             if (!categoryDropdown) return;
             categoryDropdown.innerHTML = '';
 
+            // Resolve Display Name for Active Category
+            const activeLabel = CATEGORY_TRANSLATIONS[state.activeCategory] || state.activeCategory;
             // Update Header Label
-            categoryLabel.textContent = state.activeCategory === 'All' ? 'All Categories (전체 보기)' : state.activeCategory;
+            categoryLabel.textContent = state.activeCategory === 'All' ? 'All (전체 보기)' : activeLabel;
 
             state.categories.forEach(cat => {
                 const chip = document.createElement('div');
                 chip.className = `chip ${state.activeCategory === cat ? 'active' : ''}`;
-                chip.textContent = cat;
+
+                // Add translation if available
+                const displayCat = CATEGORY_TRANSLATIONS[cat] || cat;
+                chip.textContent = displayCat;
+
                 chip.onclick = (e) => {
                     e.stopPropagation(); // Prevent bubbling
                     state.activeCategory = cat;
