@@ -7,7 +7,14 @@ const state = {
 };
 
 // Google Sheet Published CSV URL
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZlwoNDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
+
+// Fallback Data (Internal backup)
+const FALLBACK_DATA = [
+    { Category: '인사/입장', Situation: '환영', Korean: 'APP ERROR: Google Sheet 연결 실패', Pronunciation: 'Connection Failed', Nepali: '잠시 후 다시 시도해주세요.' },
+    { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '오소 오세요', Nepali: 'स्वागत छ।' },
+    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन हासिगेस्सयो?', Nepali: 'अर्डर लिनू?' }
+];
 
 // Data Loading
 async function loadData() {
@@ -22,31 +29,48 @@ async function loadData() {
             complete: function (results) {
                 if (results.data && results.data.length > 0) {
                     // Map Google Sheet columns to App internal state
-                    state.data = results.data.map(row => ({
+                    const mappedData = results.data.map(row => ({
                         Category: row['대분류'] || '기타',
                         Situation: row['상황'] || '',
                         Korean: row['한국어'] || '',
                         Pronunciation: row['발음(नेपाली लिपि)'] || '',
                         Nepali: row['네팔어'] || ''
-                    }));
+                    })).filter(item => item.Korean); // Filter out empty rows
 
-                    initCategories();
-                    renderCategories();
-                    renderCards();
+                    if (mappedData.length > 0) {
+                        state.data = mappedData;
+                        initCategories();
+                        renderCategories();
+                        renderCards();
+                        return;
+                    }
                 }
+                // If we get here, parsing failed or data was empty
+                throw new Error('Parsed data is empty');
+            },
+            error: function (err) {
+                console.error('Papa Parse Error:', err);
+                useFallbackData();
             }
         });
     } catch (error) {
         console.warn('Google Sheet fetch failed, falling back to local data.', error);
-        // Fallback to local sample_data.csv if configured or internal fallback
-        state.data = [
-            { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: 'ओसो ओसेयो', Nepali: 'स्वागत छ।' },
-            { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन हासिगेस्सयो?', Nepali: 'अर्डर लिनू?' }
-        ];
-        initCategories();
-        renderCategories();
-        renderCards();
+        useFallbackData();
     }
+}
+
+function useFallbackData() {
+    state.data = FALLBACK_DATA;
+    initCategories();
+    renderCategories();
+    renderCards();
+
+    // Show a toast or small alert about the error
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:10px 20px; border-radius:30px; z-index:9999; font-size:12px;';
+    msg.textContent = 'Data loaded from backup (Connection Issue)';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 5000);
 }
 
 function initCategories() {
