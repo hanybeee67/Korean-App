@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.5">
+    <link rel="stylesheet" href="styles.css?v=3.1">
 </head>
 
 <body>
@@ -40,8 +40,11 @@
         <!-- Category Dropdown System -->
         <div class="category-wrapper">
             <div id="category-header" class="category-header" onclick="toggleCategoryMenu()">
-                <span id="current-category-label" class="current-category">All Categories</span>
-                <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                <div style="flex-grow:1; overflow:hidden;">
+                    <span id="current-category-label" class="current-category" style="font-size:0.95rem;">All
+                        Categories</span>
+                </div>
+                <span class="toggle-icon" style="flex-shrink:0;"><i class="fas fa-chevron-down"></i></span>
             </div>
 
             <div id="category-dropdown" class="category-dropdown">
@@ -52,11 +55,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.0)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.1)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.0</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.1</div>
     </div>
 
     <!-- Scripts -->
