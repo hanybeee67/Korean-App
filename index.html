@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2.3">
 </head>
 
 <body>
@@ -46,11 +46,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.2)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.3)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.2</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.3</div>
     </div>
 
     <!-- Scripts -->
@@ -210,11 +210,11 @@
                     <div class="sentence-pronunciation">${item.Pronunciation || ''}</div>
                     <div class="sentence-meaning">${item.Nepali}</div>
                     <div class="card-actions">
-                        <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                        <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen" style="background:#2c3e50; color:white;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zm-4 0h-2.5l-5 5v5h5l5 5v-10l-2.5-5zm2.5 5h-1.09l-3.41-3.41v6.82l3.41-3.41h1.09v-10z"/></svg>
                         </button>
-                        <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')" aria-label="Speak">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')" aria-label="Speak" style="background:#f1f2f6; color:#2c3e50;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                         </button>
                     </div>
                 `;
