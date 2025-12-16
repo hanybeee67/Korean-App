@@ -55,11 +55,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.2)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.3)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.2</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.3</div>
     </div>
 
     <!-- Scripts -->
@@ -313,30 +313,58 @@
         }
 
         // TTS (Text to Speech)
+        let voicesInitialized = false;
+
+        // Pre-load voices (Android Chrome quirk)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                voicesInitialized = true;
+                console.log('Voices loaded');
+            };
+        }
+
         window.speakText = function (text, btnElement) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ko-KR';
-                utterance.rate = 0.9;
-
-                // Button animation
-                const icon = btnElement.querySelector('svg');
-                icon.style.opacity = '0.5';
-
-                utterance.onend = () => {
-                    icon.style.opacity = '1';
-                };
-
-                utterance.onerror = (e) => {
-                    console.error('TTS Error:', e);
-                    alert('음성 재생 오류 (Please use Chrome Browser)');
-                    icon.style.opacity = '1';
-                };
-
-                window.speechSynthesis.speak(utterance);
-            } else {
+            if (!('speechSynthesis' in window)) {
                 alert('음성 기능을 지원하지 않는 브라우저입니다.\n(Chrome 또는 Safari를 사용해주세요.)');
+                return;
             }
+
+            // 1. Clear any stuck speech queue (Critical for Android)
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+
+            // Button animation state
+            const icon = btnElement.querySelector('svg');
+            icon.style.opacity = '0.5';
+
+            utterance.onstart = () => {
+                console.log('TTS Started');
+            };
+
+            utterance.onend = () => {
+                icon.style.opacity = '1';
+                console.log('TTS Ended');
+            };
+
+            utterance.onerror = (e) => {
+                console.error('TTS Error Event:', e);
+                // Don't show alert immediately for 'interrupted' or 'canceled' errors
+                if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                    alert(`음성 재생 오류: ${e.error}\n(볼륨을 확인하거나 페이지를 새로고침 해주세요.)`);
+                }
+                icon.style.opacity = '1';
+            };
+
+            // Force voice selection if possible
+            const voices = window.speechSynthesis.getVoices();
+            const korVoice = voices.find(v => v.lang.includes('ko'));
+            if (korVoice) utterance.voice = korVoice;
+
+            window.speechSynthesis.speak(utterance);
         };
 
         // STT (Speech to Text)
