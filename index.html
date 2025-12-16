@@ -37,28 +37,36 @@
     </div>
 
     <div class="container">
-        <!-- Category Filters -->
-        <div id="category-container" class="category-scroll">
-            <!-- Categories injected by JS -->
-            <div class="chip active">All</div>
+        <!-- Category Dropdown System -->
+        <div class="category-wrapper">
+            <div id="category-header" class="category-header" onclick="toggleCategoryMenu()">
+                <span id="current-category-label" class="current-category">All Categories</span>
+                <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+            </div>
+
+            <div id="category-dropdown" class="category-dropdown">
+                <!-- Categories injected here -->
+            </div>
         </div>
 
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.5)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.6)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.5</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.6</div>
     </div>
 
     <!-- Scripts -->
     <script>
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             const debugEl = document.getElementById('debug-log');
-            debugEl.style.display = 'block';
-            debugEl.textContent += `Error: ${msg}\nLine: ${lineNo}\n`;
+            if (debugEl) {
+                debugEl.style.display = 'block';
+                debugEl.textContent += `Error: ${msg}\nLine: ${lineNo}\n`;
+            }
             return false;
         };
 
@@ -81,11 +89,13 @@
         const FALLBACK_DATA = [
             { Category: '인사/입장', Situation: '환영', Korean: 'APP ERROR: Google Sheet 연결 실패', Pronunciation: 'Connection Failed', Nepali: '잠시 후 다시 시도해주세요.' },
             { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '오소 오세요', Nepali: 'स्वागत छ।' },
-            { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जु무न 하सि게स्स요?', Nepali: 'अर्डर लिनू?' }
+            { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन 하सि게स्सयो?', Nepali: 'अर्डर लिनू?' }
         ];
 
         // DOM Elements
-        const categoryContainer = document.getElementById('category-container');
+        const categoryHeader = document.getElementById('category-header');
+        const categoryLabel = document.getElementById('current-category-label');
+        const categoryDropdown = document.getElementById('category-dropdown');
         const cardContainer = document.getElementById('card-container');
 
         // Initialization
@@ -110,7 +120,22 @@
             await loadData();
             renderCategories();
             renderCards();
+
+            // Click outside to close menu
+            document.addEventListener('click', (e) => {
+                const wrapper = document.querySelector('.category-wrapper');
+                if (wrapper && !wrapper.contains(e.target)) {
+                    categoryDropdown.classList.remove('show');
+                    categoryHeader.classList.remove('open');
+                }
+            });
         });
+
+        // Toggle Menu
+        window.toggleCategoryMenu = function () {
+            categoryDropdown.classList.toggle('show');
+            categoryHeader.classList.toggle('open');
+        }
 
         // Data Loading
         async function loadData() {
@@ -190,20 +215,28 @@
             state.categories = ['All', ...uniqueCats];
         }
 
-        // Rendering
+        // Rendering Categories (Dropdown Logic)
         function renderCategories() {
-            if (!categoryContainer) return;
-            categoryContainer.innerHTML = '';
+            if (!categoryDropdown) return;
+            categoryDropdown.innerHTML = '';
+
+            // Update Header Label
+            categoryLabel.textContent = state.activeCategory === 'All' ? 'All Categories (전체 보기)' : state.activeCategory;
+
             state.categories.forEach(cat => {
                 const chip = document.createElement('div');
                 chip.className = `chip ${state.activeCategory === cat ? 'active' : ''}`;
                 chip.textContent = cat;
-                chip.onclick = () => {
+                chip.onclick = (e) => {
+                    e.stopPropagation(); // Prevent bubbling
                     state.activeCategory = cat;
-                    renderCategories();
+                    renderCategories(); // Update active class
                     renderCards();
+                    // Close menu
+                    categoryDropdown.classList.remove('show');
+                    categoryHeader.classList.remove('open');
                 };
-                categoryContainer.appendChild(chip);
+                categoryDropdown.appendChild(chip);
             });
         }
 

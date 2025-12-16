@@ -79,44 +79,97 @@ h1 {
   width: 100%;
 }
 
-/* Category Filters */
-.category-scroll {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  /* Wrap items */
-  justify-content: center;
-  /* Center align */
-  padding: 4px 4px 20px;
+/* Category Dropdown System */
+.category-wrapper {
+  position: relative;
   margin-bottom: 20px;
+  z-index: 100;
+  /* Ensure it floats above content when open */
 }
 
-/* Scrollbar removal no longer needed but harmless to keep */
-.category-scroll::-webkit-scrollbar {
-  display: none;
+.category-header {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.category-header:active {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(0.99);
+}
+
+.current-category {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.toggle-icon {
+  color: var(--text-sub);
+  transition: transform 0.3s;
+}
+
+.category-header.open .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.category-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  background: rgba(30, 40, 50, 0.95);
+  /* Darker contrast for dropdown */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-lg);
+}
+
+.category-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .chip {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  padding: 8px 16px;
-  /* Slightly compact */
-  border-radius: 50px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-sub);
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #dfe6e9;
+  /* Light text for dropdown */
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .chip.active {
   background: var(--accent-color);
   color: white;
-  box-shadow: 0 8px 20px var(--accent-glow);
-  transform: translateY(-2px);
   border-color: transparent;
+  box-shadow: 0 4px 12px var(--accent-glow);
 }
 
 /* Card Grid */
