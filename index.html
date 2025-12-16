@@ -55,11 +55,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.3)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v3.4)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.3</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 3.4</div>
     </div>
 
     <!-- Scripts -->
@@ -315,62 +315,65 @@
         // TTS (Text to Speech)
         let voicesInitialized = false;
 
-        // Pre-load voices (Android Chrome quirk)
         if ('speechSynthesis' in window) {
             window.speechSynthesis.onvoiceschanged = () => {
                 voicesInitialized = true;
-                console.log('Voices loaded');
             };
         }
 
         window.speakText = function (text, btnElement) {
             if (!('speechSynthesis' in window)) {
-                alert('음성 기능을 지원하지 않는 브라우저입니다.\n(Chrome 또는 Safari를 사용해주세요.)');
+                alert('음성 기능을 지원하지 않는 브라우저입니다.');
                 return;
             }
 
-            // 1. Clear any stuck speech queue (Critical for Android)
+            // Android specific fix: Cancel -> Short Delay -> Speak
             window.speechSynthesis.cancel();
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ko-KR';
-            utterance.rate = 0.9;
-            utterance.pitch = 1.0;
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = 0.9;
 
-            // Button animation state
-            const icon = btnElement.querySelector('svg');
-            icon.style.opacity = '0.5';
+                // Voice selection robustness
+                const voices = window.speechSynthesis.getVoices();
+                const korVoice = voices.find(v => v.lang.includes('ko'));
 
-            utterance.onstart = () => {
-                console.log('TTS Started');
-            };
-
-            utterance.onend = () => {
-                icon.style.opacity = '1';
-                console.log('TTS Ended');
-            };
-
-            utterance.onerror = (e) => {
-                console.error('TTS Error Event:', e);
-                // Don't show alert immediately for 'interrupted' or 'canceled' errors
-                if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                    alert(`음성 재생 오류: ${e.error}\n(볼륨을 확인하거나 페이지를 새로고침 해주세요.)`);
+                if (voices.length > 0 && !korVoice) {
+                    // Voices exist but no Korean
+                    alert('한국어 음성 패키지가 설치되어 있지 않습니다.\n(설정 > 접근성 > 텍스트 읽어주기 설정 확인)');
                 }
-                icon.style.opacity = '1';
-            };
 
-            // Force voice selection if possible
-            const voices = window.speechSynthesis.getVoices();
-            const korVoice = voices.find(v => v.lang.includes('ko'));
-            if (korVoice) utterance.voice = korVoice;
+                if (korVoice) utterance.voice = korVoice;
 
-            window.speechSynthesis.speak(utterance);
+                const icon = btnElement.querySelector('svg');
+                icon.style.opacity = '0.5';
+
+                utterance.onend = () => { icon.style.opacity = '1'; };
+                utterance.onerror = (e) => {
+                    if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                        // On Android, sometimes 'network' error occurs if offline voice isn't downloaded
+                        alert(`재생 오류: ${e.error}\n(인터넷 연결 또는 TTS 설정을 확인해주세요)`);
+                    }
+                    icon.style.opacity = '1';
+                };
+
+                window.speechSynthesis.speak(utterance);
+            }, 50); // Small 50ms delay for Android stability
         };
 
         // STT (Speech to Text)
         window.startListening = function (targetText, btnId) {
+            // iOS Detection
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            if (isIOS) {
+                alert('아이폰(iOS)은 보안 정책상 \n웹사이트 음성 인식을 지원하지 않습니다.\n(듣기 연습만 가능합니다)');
+                return;
+            }
+
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해주세요.');
+                alert('이 브라우저는 음성 인식을 지원하지 않습니다.\n(안드로이드 Chrome을 사용해주세요)');
                 return;
             }
 
@@ -394,15 +397,19 @@
                 const script = event.results[0][0].transcript;
                 const accuracy = compareStrings(script, targetText);
 
-                // Simple feedback alert for now
+                // Simple feedback alert
                 if (accuracy > 0.7) {
-                    alert(`धेरै राम्रो! (Great!)\nतपाईंको उच्चारण: "${script}"\n(Your pronunciation is correct)`);
+                    alert(`धेरै राम्रो! (Great!)\nतपाईंको उच्चारण: "${script}"`);
                 } else {
-                    alert(`फेरि प्रयास गर्नुहोस् (Try again)\n\nतपाईंको उच्चारण (You said): "${script}"\nसही उत्तर (Correct): "${targetText}"`);
+                    alert(`फेरि प्रयास गर्नुहोस् (Try again)\n\nYou said: "${script}"`);
                 }
             };
 
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (e) {
+                alert('마이크 권한을 확인해주세요.');
+            }
         };
 
         // Simple string similarity for feedback (Levenshtein distance based simplified)
