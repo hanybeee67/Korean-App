@@ -18,15 +18,27 @@ const FALLBACK_DATA = [
 
 // Data Loading
 async function loadData() {
+    // Safety Valve: Force fallback after 3 seconds if data is stuck
+    const safetyTimeout = setTimeout(() => {
+        console.warn('Data loading timed out (3s limit reached)');
+        useFallbackData();
+    }, 3000);
+
     try {
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
         if (!response.ok) throw new Error('Network response was not ok');
         const csvText = await response.text();
 
+        // Clear timeout if fetch succeeds
+        clearTimeout(safetyTimeout);
+
         Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
             complete: function (results) {
+                // Clear timeout if parsing completes successfully
+                clearTimeout(safetyTimeout);
+
                 if (results.data && results.data.length > 0) {
                     // Map Google Sheet columns to App internal state
                     const mappedData = results.data.map(row => ({
