@@ -52,11 +52,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.7)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.8)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.7</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.8</div>
     </div>
 
     <!-- Scripts -->
@@ -215,14 +215,31 @@
             state.categories = ['All', ...uniqueCats];
         }
 
-        // Category Translations (Korean -> Nepali)
+        // Category Translations (Korean -> Nepali/English)
         const CATEGORY_TRANSLATIONS = {
-            '인사/입장': '인사/입장 (स्वागत/Greeting)',
-            '자리/안내': '자리/안내 (सिट/Seat)',
-            '주문': '주문 (अर्डर/Order)',
-            '서빙': '서빙 (सर्भिस/Serving)',
-            '계산': '계산 (बिल/Bill)',
-            '기타': '기타 (अन्य/Other)'
+            '인사/입장': '인사/입장 (स्वागत)',
+            '자리/안내': '자리/안내 (सिट)',
+            '주문': '주문 (अर्डर)',
+            '주문 시작': '주문 시작 (Order Start)',
+            '메뉴/기본': '메뉴/기본 (Menu)',
+            '주문/확인': '주문/확인 (Check Order)',
+            '시간/안내': '시간/안내 (Time Info)',
+            '서빙': '서빙 (सर्भिस)',
+            '서빙/기본': '서빙/기본 (Serving)',
+            '추가/옵션': '추가/옵션 (Option)',
+            '계산': '계산 (बिल)',
+            '계산/결제': '계산/결제 (Bill/Pay)',
+            '예약/대기': '예약/대기 (Booking)',
+            '포장/배달': '포장/배달 (Packing)',
+            '컴플레인': '컴플레인 (Complain)',
+            '위생/청소': '위생/청소 (Cleaning)',
+            '운영/안내': '운영/안내 (Guide)',
+            '고객 케어': '고객 케어 (Care)',
+            '응급/안전': '응급/안전 (Emergency)',
+            '직원/내부': '직원/내부 (Staff)',
+            '추가/회전': '추가/회전 (Rotation)',
+            '마감/퇴장': '마감/퇴장 (Closing)',
+            '기타': '기타 (Others)'
         };
 
         // Rendering Categories (Dropdown Logic)
@@ -233,7 +250,7 @@
             // Resolve Display Name for Active Category
             const activeLabel = CATEGORY_TRANSLATIONS[state.activeCategory] || state.activeCategory;
             // Update Header Label
-            categoryLabel.textContent = state.activeCategory === 'All' ? 'All (전체 보기)' : activeLabel;
+            categoryLabel.textContent = state.activeCategory === 'All' ? 'Choose Category (메뉴 선택)' : activeLabel;
 
             state.categories.forEach(cat => {
                 const chip = document.createElement('div');
@@ -254,6 +271,9 @@
                 };
                 categoryDropdown.appendChild(chip);
             });
+
+            // Add 'Grid Class' to dropdown for styling
+            categoryDropdown.classList.add('grid-layout');
         }
 
         function renderCards() {

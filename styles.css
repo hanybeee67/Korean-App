@@ -132,18 +132,22 @@ h1 {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 16px;
 
-  display: flex;
-  flex-wrap: wrap;
+  /* Grid Layout for Dropdown */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* 2 Fixed Columns */
   gap: 10px;
-  justify-content: center;
 
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-lg);
+  max-height: 60vh;
+  /* Prevent overflow on small screens */
+  overflow-y: auto;
 }
 
 .category-dropdown.show {
@@ -155,14 +159,24 @@ h1 {
 .chip {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 10px 16px;
+  padding: 12px 10px;
+  /* Taller padding */
   border-radius: 12px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: #dfe6e9;
   /* Light text for dropdown */
   cursor: pointer;
   transition: all 0.2s;
+
+  /* Center text */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  word-break: keep-all;
+  /* Prevent awkward breaks */
 }
 
 .chip.active {
