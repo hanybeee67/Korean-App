@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=2.3">
+    <link rel="stylesheet" href="styles.css?v=2.5">
 </head>
 
 <body>
@@ -46,11 +46,11 @@
         <!-- Content Grid -->
         <div id="card-container" class="card-grid">
             <div class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.4)
+                <i class="fas fa-spinner fa-spin"></i> Loading Data... (v2.5)
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.4</div>
+        <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 2.5</div>
     </div>
 
     <!-- Scripts -->
@@ -228,7 +228,7 @@
                     <div class="sentence-meaning">${item.Nepali}</div>
                     <div class="card-actions">
                         <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen" style="background:#e74c3c; color:white;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zm-4 0h-2.5l-5 5v5h5l5 5v-10l-2.5-5zm2.5 5h-1.09l-3.41-3.41v6.82l3.41-3.41h1.09v-10z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                         </button>
                         <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')" aria-label="Speak" style="background:#2ecc71; color:white;">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
