@@ -90,6 +90,23 @@
 
         // Initialization
         document.addEventListener('DOMContentLoaded', async () => {
+            // 1. In-App Browser Escape Logic (KakaoTalk, Line, etc.)
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isAndroid = /android/i.test(navigator.userAgent);
+
+            if (userAgent.match(/kakaotalk|line|inapp|naver|instagram|facebook/i)) {
+                if (isAndroid) {
+                    // Android: Attempt to force open Chrome using Intent Scheme
+                    // Format: intent://<URL>#Intent;scheme=https;package=com.android.chrome;end
+                    const cleanUrl = location.href.replace(/^https?:\/\//, '');
+                    location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+                    return; // Stop execution to let redirect happen
+                } else {
+                    // iOS/Others: Show Alert Guide
+                    alert('⚠️ 음성 인식이 지원되지 않는 브라우저입니다.\n\n[해결 방법]\n화면 우측 상단 [⋮] 또는 [⋯] 메뉴를 누르고\n"다른 브라우저로 열기"를 선택해주세요.');
+                }
+            }
+
             await loadData();
             renderCategories();
             renderCards();
