@@ -1,6 +1,18 @@
-# System Files
-Thumbs.db
-.DS_Store
+# Node
+node_modules/
+package-lock.json
+
+# Capacitor / Build
+www/
+
+# Android
+android/.gradle/
+android/local.properties
+android/*/build/
+android/.idea/
+android/app/app-debug.apk
+android/app/release/
+android/captures/
 
 # Logs
 *.log

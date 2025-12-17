@@ -45,6 +45,9 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  /* Prevent font scaling in landscape mode */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Header */
