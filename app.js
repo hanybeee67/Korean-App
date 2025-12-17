@@ -1,3 +1,16 @@
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+    const debugEl = document.getElementById('debug-log');
+    if (debugEl) {
+        debugEl.style.display = 'block';
+        debugEl.textContent += `Error: ${msg}\nLine: ${lineNo}\n`;
+    }
+    return false;
+};
+
+// Initialize App
+console.log('App Script Starting...');
+// alert('System Check: App Started'); // Uncomment for aggressive debugging if needed
+
 // App State
 const state = {
     data: [],
@@ -7,14 +20,60 @@ const state = {
 };
 
 // Google Sheet Published CSV URL
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZlwoNDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
     { Category: '인사/입장', Situation: '환영', Korean: 'APP ERROR: Google Sheet 연결 실패', Pronunciation: 'Connection Failed', Nepali: '잠시 후 다시 시도해주세요.' },
     { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '오소 오세요', Nepali: 'स्वागत छ।' },
-    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन हासिगेस्सयो?', Nepali: 'अर्डर लिनू?' }
+    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन 하सि게स्सयो?', Nepali: 'अर्डर लिनू?' }
 ];
+
+// DOM Elements
+const categoryHeader = document.getElementById('category-header');
+const categoryLabel = document.getElementById('current-category-label');
+const categoryDropdown = document.getElementById('category-dropdown');
+const cardContainer = document.getElementById('card-container');
+
+// Initialization
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. In-App Browser Escape Logic (KakaoTalk, Line, Facebook, Messenger, etc.)
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isAndroid = /android/i.test(navigator.userAgent);
+
+    // Added 'fbav', 'fbios', 'messenger' for broader Facebook support
+    if (userAgent.match(/kakaotalk|line|inapp|naver|instagram|facebook|fbav|fbios|messenger/i)) {
+        if (isAndroid) {
+            // Android: Attempt to force open Chrome using Intent Scheme
+            // Format: intent://<URL>#Intent;scheme=https;package=com.android.chrome;end
+            const cleanUrl = location.href.replace(/^https?:\/\//, '');
+            location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+            return; // Stop execution to let redirect happen
+        } else {
+            // iOS/Others: Show Alert Guide
+            alert('⚠️ 음성 인식이 지원되지 않는 브라우저입니다.\n(메신저 브라우저 감지됨)\n\n[해결 방법]\n화면 우측 상단 [⋮] 또는 [⋯] 메뉴를 누르고\n"다른 브라우저로 열기"를 선택해주세요.');
+        }
+    }
+
+    await loadData();
+    renderCategories();
+    renderCards();
+
+    // Click outside to close menu
+    document.addEventListener('click', (e) => {
+        const wrapper = document.querySelector('.category-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            categoryDropdown.classList.remove('show');
+            categoryHeader.classList.remove('open');
+        }
+    });
+});
+
+// Toggle Menu
+window.toggleCategoryMenu = function () {
+    categoryDropdown.classList.toggle('show');
+    categoryHeader.classList.toggle('open');
+}
 
 // Data Loading
 async function loadData() {
@@ -31,6 +90,10 @@ async function loadData() {
 
         // Clear timeout if fetch succeeds
         clearTimeout(safetyTimeout);
+
+        if (typeof Papa === 'undefined') {
+            throw new Error('PapaParse library not loaded');
+        }
 
         Papa.parse(csvText, {
             header: true,
@@ -90,23 +153,69 @@ function initCategories() {
     state.categories = ['All', ...uniqueCats];
 }
 
-// Rendering
+// Category Translations (Korean -> English)
+const CATEGORY_TRANSLATIONS = {
+    '인사/입장': '인사/입장 (Greeting)',
+    '자리/안내': '자리/안내 (Guidance)',
+    '주문': '주문 (Order)',
+    '주문 시작': '주문 시작 (Order Start)',
+    '메뉴/기본': '메뉴/기본 (Menu)',
+    '주문/확인': '주문/확인 (Confirm)',
+    '시간/안내': '시간/안내 (Time Info)',
+    '서빙': '서빙 (Serving)',
+    '서빙/기본': '서빙/기본 (Serving)',
+    '추가/옵션': '추가/옵션 (Option)',
+    '계산': '계산 (Bill)',
+    '계산/결제': '계산/결제 (Payment)',
+    '예약/대기': '예약/대기 (Booking)',
+    '포장/배달': '포장/배달 (Packing)',
+    '컴플레인': '컴플레인 (Complain)',
+    '위생/청소': '위생/청소 (Cleaning)',
+    '운영/안내': '운영/안내 (Guide)',
+    '고객 케어': '고객 케어 (Care)',
+    '응급/안전': '응급/안전 (Emergency)',
+    '직원/내부': '직원/내부 (Staff)',
+    '추가/회전': '추가/회전 (Rotation)',
+    '마감/퇴장': '마감/퇴장 (Closing)',
+    '기타': '기타 (Others)'
+};
+
+// Rendering Categories (Dropdown Logic)
 function renderCategories() {
-    categoryContainer.innerHTML = '';
+    if (!categoryDropdown) return;
+    categoryDropdown.innerHTML = '';
+
+    // Resolve Display Name for Active Category
+    const activeLabel = CATEGORY_TRANSLATIONS[state.activeCategory] || state.activeCategory;
+    // Update Header Label
+    categoryLabel.textContent = state.activeCategory === 'All' ? 'Choose Category (메뉴 선택)' : activeLabel;
+
     state.categories.forEach(cat => {
         const chip = document.createElement('div');
         chip.className = `chip ${state.activeCategory === cat ? 'active' : ''}`;
-        chip.textContent = cat;
-        chip.onclick = () => {
+
+        // Add translation if available
+        const displayCat = CATEGORY_TRANSLATIONS[cat] || cat;
+        chip.textContent = displayCat;
+
+        chip.onclick = (e) => {
+            e.stopPropagation(); // Prevent bubbling
             state.activeCategory = cat;
-            renderCategories();
+            renderCategories(); // Update active class
             renderCards();
+            // Close menu
+            categoryDropdown.classList.remove('show');
+            categoryHeader.classList.remove('open');
         };
-        categoryContainer.appendChild(chip);
+        categoryDropdown.appendChild(chip);
     });
+
+    // Add 'Grid Class' to dropdown for styling
+    categoryDropdown.classList.add('grid-layout');
 }
 
 function renderCards() {
+    if (!cardContainer) return;
     cardContainer.innerHTML = '';
     const filteredData = state.activeCategory === 'All'
         ? state.data
@@ -125,11 +234,11 @@ function renderCards() {
             <div class="sentence-pronunciation">${item.Pronunciation || ''}</div>
             <div class="sentence-meaning">${item.Nepali}</div>
             <div class="card-actions">
-                <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)">
-                    <i class="fas fa-volume-up"></i>
+                <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen" style="background:#e74c3c; color:white;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
-                <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')">
-                    <i class="fas fa-microphone"></i>
+                <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')" aria-label="Speak" style="background:#2ecc71; color:white;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                 </button>
             </div>
         `;
@@ -138,31 +247,67 @@ function renderCards() {
 }
 
 // TTS (Text to Speech)
+let voicesInitialized = false;
+
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        voicesInitialized = true;
+    };
+}
+
 window.speakText = function (text, btnElement) {
-    if ('speechSynthesis' in window) {
+    if (!('speechSynthesis' in window)) {
+        alert('음성 기능을 지원하지 않는 브라우저입니다.');
+        return;
+    }
+
+    // Android specific fix: Cancel -> Short Delay -> Speak
+    window.speechSynthesis.cancel();
+
+    setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ko-KR';
-        utterance.rate = 0.9; // Slightly slower for better clarity
+        utterance.rate = 0.9;
 
-        // Button animation
-        const icon = btnElement.querySelector('i');
-        const originalClass = icon.className;
-        icon.className = 'fas fa-volume-high fa-beat'; // Visual feedback
+        // Voice selection robustness
+        const voices = window.speechSynthesis.getVoices();
+        const korVoice = voices.find(v => v.lang.includes('ko'));
 
-        utterance.onend = () => {
-            icon.className = originalClass;
+        if (voices.length > 0 && !korVoice) {
+            // Voices exist but no Korean
+            alert('한국어 음성 패키지가 없습니다.\n\n[설정 방법]\n폰 설정 > 일반 (또는 접근성) > 텍스트 읽어주기 > 기본 엔진 설정에서 한국어 데이터를 설치해주세요.');
+        }
+
+        if (korVoice) utterance.voice = korVoice;
+
+        const icon = btnElement.querySelector('svg');
+        icon.style.opacity = '0.5';
+
+        utterance.onend = () => { icon.style.opacity = '1'; };
+        utterance.onerror = (e) => {
+            if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                // On Android, sometimes 'network' error occurs if offline voice isn't downloaded
+                alert(`재생 오류: ${e.error}\n(폰 설정에서 '텍스트 읽어주기'를 검색해서 한국어 음성을 다운로드 받아주세요)`);
+            }
+            icon.style.opacity = '1';
         };
 
         window.speechSynthesis.speak(utterance);
-    } else {
-        alert('이 브라우저는 음성 합성을 지원하지 않습니다. (TTS not supported)');
-    }
+    }, 50); // Small 50ms delay for Android stability
 };
 
 // STT (Speech to Text)
 window.startListening = function (targetText, btnId) {
+    // iOS Detection
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isIOS) {
+        alert('아이폰(iOS)은 보안 정책상 \n웹사이트 음성 인식을 지원하지 않습니다.\n(듣기 연습만 가능합니다)');
+        return;
+    }
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해주세요.');
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다.\n(안드로이드 Chrome을 사용해주세요)');
         return;
     }
 
@@ -186,15 +331,19 @@ window.startListening = function (targetText, btnId) {
         const script = event.results[0][0].transcript;
         const accuracy = compareStrings(script, targetText);
 
-        // Simple feedback alert for now
+        // Simple feedback alert
         if (accuracy > 0.7) {
-            alert(`성공! (Great!)\n당신의 발음: "${script}"\n정확도: Good`);
+            alert(`धेरै राम्रो! (Great!)\nतपाईंको उच्चारण: "${script}"`);
         } else {
-            alert(`다시 시도해보세요. (Try again)\n당신의 발음: "${script}"\n목표: "${targetText}"`);
+            alert(`फेरि प्रयास गर्नुहोस् (Try again)\n\nYou said: "${script}"`);
         }
     };
 
-    recognition.start();
+    try {
+        recognition.start();
+    } catch (e) {
+        alert('마이크 권한을 확인해주세요.');
+    }
 };
 
 // Simple string similarity for feedback (Levenshtein distance based simplified)
