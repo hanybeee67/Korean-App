@@ -405,19 +405,27 @@ h1 {
 }
 
 .guide-step b {
-  color: #e67e22;
+  color: #d35400;
+  /* Darker orange */
   display: block;
   margin-bottom: 5px;
+  font-size: 1.2rem;
 }
 
-.guide-text-en {
-  font-size: 0.95rem;
-  /* Slightly larger */
-  color: #444;
-  /* Much darker for readability */
+.guide-text {
+  font-size: 1.1rem;
+  /* Much larger */
+  color: #000;
+  /* Pitch black */
+  font-weight: 700;
+  /* Bold */
   display: block;
-  margin-top: 5px;
-  line-height: 1.4;
+  margin-top: 8px;
+  line-height: 1.5;
+  background: #fdf2e9;
+  /* Light contrast background */
+  padding: 5px;
+  border-radius: 5px;
 }
 
 /* Feedback Modal Specifics */
