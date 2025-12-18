@@ -411,10 +411,13 @@ h1 {
 }
 
 .guide-text-en {
-  font-size: 0.85rem;
-  color: #7f8c8d;
+  font-size: 0.95rem;
+  /* Slightly larger */
+  color: #444;
+  /* Much darker for readability */
   display: block;
-  margin-top: 3px;
+  margin-top: 5px;
+  line-height: 1.4;
 }
 
 /* Feedback Modal Specifics */
