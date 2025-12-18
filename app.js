@@ -244,34 +244,48 @@ function renderCards() {
     });
 }
 
-// TTS (Text to Speech) Global Synth Object
-const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
-let voices = [];
+// TTS (Text to Speech) Helpers
+function getSynth() {
+    // Check all possible locations for Speech API
+    return window.speechSynthesis ||
+        window.webkitSpeechSynthesis ||
+        (navigator && navigator.speechSynthesis);
+}
 
+let voices = [];
 function loadVoices() {
+    const synth = getSynth();
     if (synth) {
         voices = synth.getVoices();
         console.log('Voices loaded:', voices.length);
     }
 }
 
-if (synth) {
-    if (synth.onvoiceschanged !== undefined) {
-        synth.onvoiceschanged = loadVoices;
+// Initial voice load attempt
+if (getSynth()) {
+    if (getSynth().onvoiceschanged !== undefined) {
+        getSynth().onvoiceschanged = loadVoices;
     }
-    loadVoices(); // Initial attempt
+    loadVoices();
 }
 
 window.speakText = function (text, btnElement) {
+    const synth = getSynth();
+
     if (!synth) {
-        alert('이 기기의 브라우저는 음성 재생 기능을 지원하지 않습니다.\n(speechSynthesis is missing)');
+        const isSecure = window.isSecureContext ? "Secure" : "Not Secure";
+        const hasUtterance = !!(window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance);
+        const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        const ua = navigator.userAgent;
+
+        alert(`[치명적 오류] 음성 API를 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Utterance API: ${hasUtterance}\n- Recognition API: ${hasSR}\n- UA: ${ua}\n\n[가능한 원인]\n안드로이드 16+ 전용 보안 정책 또는 웹뷰 설정 이슈입니다.`);
         return;
     }
 
     // Stop manual playback if already speaking
     synth.cancel();
 
-    // Android/JS quirk: Voice list might be empty on first load
+    // Re-check voices if list is empty
     if (voices.length === 0) {
         loadVoices();
     }
@@ -285,7 +299,7 @@ window.speakText = function (text, btnElement) {
         let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
 
         if (voices.length > 0 && !korVoice) {
-            alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n폰 설정 > 일반 > 글자 읽어주기(또는 TTS) > "기본 엔진"이 Google인지 확인하고 한국어 데이터가 설치되어 있는지 확인해주세요.');
+            alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n1. 폰 설정 > 글자 읽어주기(TTS) > 기본 엔진을 Google로 설정\n2. 한국어 음성 데이터 설치 확인');
         }
 
         if (korVoice) utterance.voice = korVoice;
@@ -297,7 +311,7 @@ window.speakText = function (text, btnElement) {
         utterance.onerror = (e) => {
             if (e.error !== 'interrupted' && e.error !== 'canceled') {
                 console.error('TTS Error:', e.error);
-                alert(`재생 오류가 발생했습니다: ${e.error}\n(설정에서 Google 음성 서비스가 켜져있는지 확인해주세요)`);
+                alert(`재생 중 오류(${e.error})가 발생했습니다.\n구글 음성 서비스 설정을 확인해 주세요.`);
             }
             if (icon) icon.style.opacity = '1';
         };
