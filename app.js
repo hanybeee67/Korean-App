@@ -37,20 +37,18 @@ const cardContainer = document.getElementById('card-container');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. In-App Browser Escape Logic (KakaoTalk, Line, Facebook, Messenger, etc.)
+    // 1. In-App Browser Escape Logic (Only for web environment, not needed in native APK)
     const userAgent = navigator.userAgent.toLowerCase();
     const isAndroid = /android/i.test(navigator.userAgent);
+    const isCapacitor = !!(window.Capacitor && window.Capacitor.platform); // Detect if running inside Capacitor
 
-    // Added 'fbav', 'fbios', 'messenger' for broader Facebook support
-    if (userAgent.match(/kakaotalk|line|inapp|naver|instagram|facebook|fbav|fbios|messenger/i)) {
+    // Only run this logic if NOT in Capacitor and using a problematic in-app browser
+    if (!isCapacitor && userAgent.match(/kakaotalk|line|naver|instagram|facebook|fbav|fbios|messenger/i)) {
         if (isAndroid) {
-            // Android: Attempt to force open Chrome using Intent Scheme
-            // Format: intent://<URL>#Intent;scheme=https;package=com.android.chrome;end
             const cleanUrl = location.href.replace(/^https?:\/\//, '');
             location.href = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`;
-            return; // Stop execution to let redirect happen
+            return;
         } else {
-            // iOS/Others: Show Alert Guide
             alert('⚠️ 음성 인식이 지원되지 않는 브라우저입니다.\n(메신저 브라우저 감지됨)\n\n[해결 방법]\n화면 우측 상단 [⋮] 또는 [⋯] 메뉴를 누르고\n"다른 브라우저로 열기"를 선택해주세요.');
         }
     }
@@ -246,54 +244,66 @@ function renderCards() {
     });
 }
 
-// TTS (Text to Speech)
-let voicesInitialized = false;
+// TTS (Text to Speech) Global Synth Object
+const synth = window.speechSynthesis || window.webkitSpeechSynthesis;
+let voices = [];
 
-if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => {
-        voicesInitialized = true;
-    };
+function loadVoices() {
+    if (synth) {
+        voices = synth.getVoices();
+        console.log('Voices loaded:', voices.length);
+    }
+}
+
+if (synth) {
+    if (synth.onvoiceschanged !== undefined) {
+        synth.onvoiceschanged = loadVoices;
+    }
+    loadVoices(); // Initial attempt
 }
 
 window.speakText = function (text, btnElement) {
-    if (!('speechSynthesis' in window)) {
-        alert('음성 기능을 지원하지 않는 브라우저입니다.');
+    if (!synth) {
+        alert('이 기기의 브라우저는 음성 재생 기능을 지원하지 않습니다.\n(speechSynthesis is missing)');
         return;
     }
 
-    // Android specific fix: Cancel -> Short Delay -> Speak
-    window.speechSynthesis.cancel();
+    // Stop manual playback if already speaking
+    synth.cancel();
+
+    // Android/JS quirk: Voice list might be empty on first load
+    if (voices.length === 0) {
+        loadVoices();
+    }
 
     setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'ko-KR';
         utterance.rate = 0.9;
 
-        // Voice selection robustness
-        const voices = window.speechSynthesis.getVoices();
-        const korVoice = voices.find(v => v.lang.includes('ko'));
+        // Resilience: Try to find a Korean voice
+        let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
 
         if (voices.length > 0 && !korVoice) {
-            // Voices exist but no Korean
-            alert('한국어 음성 패키지가 없습니다.\n\n[설정 방법]\n폰 설정 > 일반 (또는 접근성) > 텍스트 읽어주기 > 기본 엔진 설정에서 한국어 데이터를 설치해주세요.');
+            alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n폰 설정 > 일반 > 글자 읽어주기(또는 TTS) > "기본 엔진"이 Google인지 확인하고 한국어 데이터가 설치되어 있는지 확인해주세요.');
         }
 
         if (korVoice) utterance.voice = korVoice;
 
         const icon = btnElement.querySelector('svg');
-        icon.style.opacity = '0.5';
+        if (icon) icon.style.opacity = '0.5';
 
-        utterance.onend = () => { icon.style.opacity = '1'; };
+        utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
         utterance.onerror = (e) => {
             if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                // On Android, sometimes 'network' error occurs if offline voice isn't downloaded
-                alert(`재생 오류: ${e.error}\n(폰 설정에서 '텍스트 읽어주기'를 검색해서 한국어 음성을 다운로드 받아주세요)`);
+                console.error('TTS Error:', e.error);
+                alert(`재생 오류가 발생했습니다: ${e.error}\n(설정에서 Google 음성 서비스가 켜져있는지 확인해주세요)`);
             }
-            icon.style.opacity = '1';
+            if (icon) icon.style.opacity = '1';
         };
 
-        window.speechSynthesis.speak(utterance);
-    }, 50); // Small 50ms delay for Android stability
+        synth.speak(utterance);
+    }, 50);
 };
 
 // STT (Speech to Text)
