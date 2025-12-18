@@ -9,6 +9,10 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
 
 // Initialize App
 console.log('App Script Starting...');
+
+// Safe import for Capacitor Plugins
+const { TextToSpeech } = window.Capacitor ? window.Capacitor.Plugins : {};
+
 // alert('System Check: App Started'); // Uncomment for aggressive debugging if needed
 
 // App State
@@ -275,7 +279,29 @@ if (getSynth()) {
     loadVoices();
 }
 
-window.speakText = function (text, btnElement) {
+window.speakText = async function (text, btnElement) {
+    const icon = btnElement ? btnElement.querySelector('svg') : null;
+    if (icon) icon.style.opacity = '0.5';
+
+    // 1. Try Native Capacitor TTS Plugin (Best for Android 16)
+    if (TextToSpeech) {
+        try {
+            await TextToSpeech.speak({
+                text: text,
+                lang: 'ko-KR',
+                rate: 0.9,
+                pitch: 1.0,
+                volume: 1.0,
+                category: 'ambient',
+            });
+            if (icon) icon.style.opacity = '1';
+            return;
+        } catch (e) {
+            console.warn('Native TTS failed, falling back to Web Speech:', e);
+        }
+    }
+
+    // 2. Fallback to Web Speech API
     const synth = getSynth();
     const UtteranceClass = getUtteranceClass();
 
@@ -284,17 +310,13 @@ window.speakText = function (text, btnElement) {
         const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
         const ua = navigator.userAgent;
 
-        alert(`[치명적 오류] 음성 재생 엔진을 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Synth: ${!!synth}\n- Utterance: ${!!UtteranceClass}\n- Mic API: ${hasSR}\n- UA: ${ua}\n\n[해결 방법]\n안드로이드 시스템 웹뷰(WebView) 앱을 최신으로 업데이트해 주세요.`);
+        alert(`[치명적 오류] 음성 재생 엔진을 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Native Plugin: ${!!TextToSpeech}\n- Synth API: ${!!synth}\n- Utterance Class: ${!!UtteranceClass}\n- Mic API: ${hasSR}\n- UA: ${ua}\n\n[해결 방법]\n안드로이드 시스템 웹뷰(WebView) 앱을 최신으로 업데이트해 주세요.`);
+        if (icon) icon.style.opacity = '1';
         return;
     }
 
     // Stop manual playback if already speaking
     synth.cancel();
-
-    // Re-check voices if list is empty
-    if (voices.length === 0) {
-        loadVoices();
-    }
 
     setTimeout(() => {
         try {
@@ -304,28 +326,21 @@ window.speakText = function (text, btnElement) {
 
             // Resilience: Try to find a Korean voice
             let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
-
-            if (voices.length > 0 && !korVoice) {
-                alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n1. 폰 설정 > 글자 읽어주기(TTS) > 기본 엔진을 Google로 설정\n2. 한국어 음성 데이터 설치 확인');
-            }
-
             if (korVoice) utterance.voice = korVoice;
-
-            const icon = btnElement.querySelector('svg');
-            if (icon) icon.style.opacity = '0.5';
 
             utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
             utterance.onerror = (e) => {
                 if (e.error !== 'interrupted' && e.error !== 'canceled') {
                     console.error('TTS Error:', e.error);
-                    alert(`재생 중 오류(${e.error})가 발생했습니다.\n구글 음성 서비스 설정을 확인해 주세요.`);
+                    alert(`재생 오류: ${e.error}`);
                 }
                 if (icon) icon.style.opacity = '1';
             };
 
             synth.speak(utterance);
         } catch (err) {
-            alert('음성 객체 생성 실패: ' + err.message);
+            alert('객체 생성 실패: ' + err.message);
+            if (icon) icon.style.opacity = '1';
         }
     }, 50);
 };

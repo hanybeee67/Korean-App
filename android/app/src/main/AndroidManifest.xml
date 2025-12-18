@@ -42,6 +42,8 @@
 
     <!-- Queries for TTS Engines (Required for Android 11+) -->
     <queries>
+        <package android:name="com.google.android.tts" />
+        <package android:name="com.samsung.android.tts" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
