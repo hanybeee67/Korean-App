@@ -136,6 +136,18 @@
         </div>
     </div>
 
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal-overlay" onclick="closeModal('feedback-modal')">
+        <div class="modal-content feedback-content" onclick="event.stopPropagation()">
+            <div id="feedback-icon" class="clap-icon">👏</div>
+            <h2 id="feedback-title">Great!</h2>
+            <p id="feedback-sub" style="color:#666; margin-bottom:15px; font-size:1.1rem;"></p>
+            <p id="feedback-text" style="font-size:0.9rem; color:#999;"></p>
+            <button class="btn-install btn-android" style="width:100%; margin-top:20px;"
+                onclick="closeModal('feedback-modal')">Next (다음)</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>

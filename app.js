@@ -389,11 +389,46 @@ window.startListening = function (targetText, btnId) {
         const script = event.results[0][0].transcript;
         const accuracy = compareStrings(script, targetText);
 
-        // Simple feedback alert
+        // Enhanced Feedback Modal and Sound
         if (accuracy > 0.7) {
-            alert(`धेरै राम्रो! (Great!)\nतपाईंको उच्चारण: "${script}"`);
+            // 1. Play Clap Sound
+            const audio = new Audio('clap.mp3');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+
+            // 2. Show Modal with Animation
+            const modal = document.getElementById('feedback-modal');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const sub = document.getElementById('feedback-sub');
+            const text = document.getElementById('feedback-text');
+
+            icon.innerHTML = '👏';
+            icon.classList.add('animate-clap');
+            title.textContent = 'धेरै राम्रो! (Great!)';
+            title.style.color = '#2ecc71';
+            sub.textContent = `"${script}"`;
+            text.textContent = 'Excellent pronunciation!';
+
+            openModal('feedback-modal');
+
+            // Auto close/stop animation after some time if needed
+            setTimeout(() => icon.classList.remove('animate-clap'), 3000);
         } else {
-            alert(`फेरि प्रयास गर्नुहोस् (Try again)\n\nYou said: "${script}"`);
+            // Optional: Sad/Retry Feedback
+            const modal = document.getElementById('feedback-modal');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const sub = document.getElementById('feedback-sub');
+            const text = document.getElementById('feedback-text');
+
+            icon.innerHTML = '🎯';
+            icon.classList.remove('animate-clap');
+            title.textContent = 'फेरि प्रयास गर्नुहोस् (Try again)';
+            title.style.color = '#e67e22';
+            sub.textContent = `"${script}"`;
+            text.textContent = 'Keep practicing!';
+
+            openModal('feedback-modal');
         }
     };
 
