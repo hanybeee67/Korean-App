@@ -216,6 +216,15 @@ function renderCategories() {
     categoryDropdown.classList.add('grid-layout');
 }
 
+// Global Modal Controls
+window.openModal = function (id) {
+    document.getElementById(id).style.display = 'flex';
+}
+
+window.closeModal = function (id) {
+    document.getElementById(id).style.display = 'none';
+}
+
 function renderCards() {
     if (!cardContainer) return;
     cardContainer.innerHTML = '';
