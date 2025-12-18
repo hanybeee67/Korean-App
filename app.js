@@ -246,10 +246,16 @@ function renderCards() {
 
 // TTS (Text to Speech) Helpers
 function getSynth() {
-    // Check all possible locations for Speech API
     return window.speechSynthesis ||
         window.webkitSpeechSynthesis ||
         (navigator && navigator.speechSynthesis);
+}
+
+function getUtteranceClass() {
+    return window.SpeechSynthesisUtterance ||
+        window.webkitSpeechSynthesisUtterance ||
+        window.mozSpeechSynthesisUtterance ||
+        window.msSpeechSynthesisUtterance;
 }
 
 let voices = [];
@@ -271,14 +277,14 @@ if (getSynth()) {
 
 window.speakText = function (text, btnElement) {
     const synth = getSynth();
+    const UtteranceClass = getUtteranceClass();
 
-    if (!synth) {
+    if (!synth || !UtteranceClass) {
         const isSecure = window.isSecureContext ? "Secure" : "Not Secure";
-        const hasUtterance = !!(window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance);
         const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
         const ua = navigator.userAgent;
 
-        alert(`[치명적 오류] 음성 API를 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Utterance API: ${hasUtterance}\n- Recognition API: ${hasSR}\n- UA: ${ua}\n\n[가능한 원인]\n안드로이드 16+ 전용 보안 정책 또는 웹뷰 설정 이슈입니다.`);
+        alert(`[치명적 오류] 음성 재생 엔진을 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Synth: ${!!synth}\n- Utterance: ${!!UtteranceClass}\n- Mic API: ${hasSR}\n- UA: ${ua}\n\n[해결 방법]\n안드로이드 시스템 웹뷰(WebView) 앱을 최신으로 업데이트해 주세요.`);
         return;
     }
 
@@ -291,32 +297,36 @@ window.speakText = function (text, btnElement) {
     }
 
     setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR';
-        utterance.rate = 0.9;
+        try {
+            const utterance = new UtteranceClass(text);
+            utterance.lang = 'ko-KR';
+            utterance.rate = 0.9;
 
-        // Resilience: Try to find a Korean voice
-        let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
+            // Resilience: Try to find a Korean voice
+            let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
 
-        if (voices.length > 0 && !korVoice) {
-            alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n1. 폰 설정 > 글자 읽어주기(TTS) > 기본 엔진을 Google로 설정\n2. 한국어 음성 데이터 설치 확인');
-        }
-
-        if (korVoice) utterance.voice = korVoice;
-
-        const icon = btnElement.querySelector('svg');
-        if (icon) icon.style.opacity = '0.5';
-
-        utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
-        utterance.onerror = (e) => {
-            if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                console.error('TTS Error:', e.error);
-                alert(`재생 중 오류(${e.error})가 발생했습니다.\n구글 음성 서비스 설정을 확인해 주세요.`);
+            if (voices.length > 0 && !korVoice) {
+                alert('한국어 음성 서비스가 감지되지 않습니다.\n\n[해결 방법]\n1. 폰 설정 > 글자 읽어주기(TTS) > 기본 엔진을 Google로 설정\n2. 한국어 음성 데이터 설치 확인');
             }
-            if (icon) icon.style.opacity = '1';
-        };
 
-        synth.speak(utterance);
+            if (korVoice) utterance.voice = korVoice;
+
+            const icon = btnElement.querySelector('svg');
+            if (icon) icon.style.opacity = '0.5';
+
+            utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
+            utterance.onerror = (e) => {
+                if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                    console.error('TTS Error:', e.error);
+                    alert(`재생 중 오류(${e.error})가 발생했습니다.\n구글 음성 서비스 설정을 확인해 주세요.`);
+                }
+                if (icon) icon.style.opacity = '1';
+            };
+
+            synth.speak(utterance);
+        } catch (err) {
+            alert('음성 객체 생성 실패: ' + err.message);
+        }
     }, 50);
 };
 
