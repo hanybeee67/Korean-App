@@ -29,7 +29,7 @@
 
     <header>
         <h1>Everest Korean</h1>
-        <p class="subtitle">네팔 직원을 위한 AI 한국어 선생님</p>
+        <p class="subtitle">AI Korean Teacher for Nepali Staff<br>(नेपाली कर्मचारीहरूका लागि एआई कोरियाली शिक्षक)</p>
     </header>
 
     <div id="debug-log"
@@ -40,7 +40,8 @@
         <!-- Install & Guide Section -->
         <div id="install-section" class="install-banner">
             <h3>📱 Install Everest App</h3>
-            <p style="font-size:0.85rem; opacity:0.9;">직원들을 위한 앱 설치 및 소리 설정 안내</p>
+            <p style="font-size:0.85rem; opacity:0.9;">Installation & Sound Settings Guide for Staff<br>(कर्मचारीहरूको
+                लागि स्थापना र ध्वनि सेटिङ गाइड)</p>
             <div class="install-actions">
                 <a href="https://drive.google.com/file/d/1jhNrD_c_0c8bwKndu_QsBQXspxTd8HaQ/view?usp=sharing"
                     target="_blank" class="btn-install btn-android">
@@ -92,21 +93,29 @@
     <div id="ios-modal" class="modal-overlay" onclick="closeModal('ios-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal('ios-modal')">&times;</span>
-            <h2>iPhone Guide (iOS)</h2>
+            <h2>iPhone Guide (आइफोन गाइड)</h2>
+
+            <div
+                style="background:#fff3cd; color:#856404; padding:10px; border-radius:10px; margin-bottom:15px; font-size:0.9rem; border:1px solid #ffeeba;">
+                <b>⚠️ CRITICAL (महत्त्वपूर्ण):</b><br>
+                Do NOT use KakaoTalk browser.<br>(काकाओटक ब्राउजर प्रयोग नगर्नुहोस्।)<br>
+                <b>Use Safari ONLY (सफारी मात्र प्रयोग गर्नुहोस्)</b>
+            </div>
+
             <div class="guide-step">
                 <b>1. Open Safari Browser</b>
-                <span class="guide-text">Safari 브라우저에서 사이트 접속</span>
+                <span class="guide-text">Safari ब्राउजरमा जानुहोस्</span>
             </div>
             <div class="guide-step">
                 <b>2. Tap Share Button <i class="fas fa-share-square"></i></b>
-                <span class="guide-text">하단 중앙의 공유 버튼 클릭</span>
+                <span class="guide-text">साझा (Share) बटन ट्याप गर्नुहोस्</span>
             </div>
             <div class="guide-step">
-                <b>3. 'Add to Home Screen' <i class="fas fa-plus-square"></i></b>
-                <span class="guide-text">'홈 화면에 추가' 선택</span>
+                <b>3. Add to Home Screen <i class="fas fa-plus-square"></i></b>
+                <span class="guide-text">'홈 화면에 추가' (Home Screen मा थप्नुहोस्)</span>
             </div>
-            <button class="btn-install btn-android" style="width:100%;" onclick="closeModal('ios-modal')">OK,
-                Understood</button>
+            <button class="btn-install btn-android" style="width:100%;" onclick="closeModal('ios-modal')">OK, Understood
+                (ठिक छ)</button>
         </div>
     </div>
 
@@ -114,25 +123,24 @@
     <div id="sound-modal" class="modal-overlay" onclick="closeModal('sound-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal('sound-modal')">&times;</span>
-            <h2>Sound Help (소리 설정)</h2>
-            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">If you can't hear any sound, please follow this
-                (소리가 안 나오면 설정하세요):</p>
+            <h2>Sound Help (ध्वनि मद्दत)</h2>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">If you can't hear any sound (यदि तपाईंले आवाज
+                सुन्न सक्नुहुन्न भने):</p>
 
             <div class="guide-step">
-                <b>[Android / English Settings]</b>
+                <b>[Android / Google TTS]</b>
                 <span class="guide-text">1. Settings > General management</span>
                 <span class="guide-text">2. Text-to-speech output</span>
-                <span class="guide-text">3. Gear icon <i class="fas fa-cog"></i> next to Google</span>
-                <span class="guide-text">4. Install voice data > <b>Download Korean</b></span>
-                <span class="guide-text">설정 > 일반 > 글자 읽어주기 > 구글 엔진 설정 > 한국어 다운로드</span>
+                <span class="guide-text">3. Install voice data > <b>Download Korean</b></span>
+                <span class="guide-text">कोरियाली भाषा डाउनलोड गर्नुहोस्</span>
             </div>
 
             <div class="guide-step">
                 <b>[iPhone / iOS]</b>
-                <span class="guide-text">Check Silent Mode switch (무음 스위치 확인)</span>
+                <span class="guide-text">Check Silent Mode switch (मौन मोड स्विच जाँच गर्नुहोस्)</span>
             </div>
-            <button class="btn-install btn-android" style="width:100%;" onclick="closeModal('sound-modal')">Close
-                (닫기)</button>
+            <button class="btn-install btn-android" style="width:100%;" onclick="closeModal('sound-modal')">Close (बन्द
+                गर्नुहोस्)</button>
         </div>
     </div>
 
