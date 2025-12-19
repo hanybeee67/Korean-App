@@ -356,16 +356,19 @@ window.speakText = async function (text, btnElement) {
 
 // STT (Speech to Text)
 window.startListening = function (targetText, btnId) {
-    // iOS Detection
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    // Browser/Platform Detection
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/i.test(userAgent);
+    const isKakaotalk = /kakaotalk/i.test(userAgent);
 
-    if (isIOS) {
-        alert('아이폰(iOS)은 보안 정책상 \n웹사이트 음성 인식을 지원하지 않습니다.\n(듣기 연습만 가능합니다)');
+    // iOS KakaoTalk In-App Browser Limitation
+    if (isIOS && isKakaotalk) {
+        alert('⚠️ 아이폰 카톡 브라우저에서는 마이크 기능이 제한됩니다.\n\n[해결 방법]\n오른쪽 하단 [⋯] 버튼을 누르고\n"Safari로 열기"를 선택해 주세요.');
         return;
     }
 
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('이 브라우저는 음성 인식을 지원하지 않습니다.\n(안드로이드 Chrome을 사용해주세요)');
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다.\n\n[권장 브라우저]\n- 안드로이드: Chrome\n- 아이폰: Safari');
         return;
     }
 
