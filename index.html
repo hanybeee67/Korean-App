@@ -81,9 +81,9 @@
         <div style="text-align:center; margin-top:20px; color:#aaa; font-size:12px;">App Version 4.6</div>
         <div style="text-align:center; margin-top:10px;">
             <button
-                onclick="alert('Secure Context: ' + window.isSecureContext + '\nSS: ' + !!window.speechSynthesis + '\nWS: ' + !!window.webkitSpeechSynthesis)"
+                onclick="alert('시스템 정보:\n' + navigator.userAgent + '\n\n보안 연결: ' + window.isSecureContext + '\n음성 재생: ' + !!window.speechSynthesis + '\n음성 인식: ' + !!window.webkitSpeechRecognition)"
                 style="background:none; border:1px solid #ddd; color:#ddd; font-size:10px; padding:2px 5px; border-radius:5px;">Check
-                System</button>
+                System (버전 확인)</button>
         </div>
     </div>
 

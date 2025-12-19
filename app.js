@@ -20,8 +20,7 @@ const state = {
     data: [],
     categories: ['All'],
     activeCategory: 'All',
-    isListening: false,
-    recognition: null // 전역 싱글톤 인스턴스 저장
+    isListening: false
 };
 
 // Google Sheet Published CSV URL
@@ -356,7 +355,6 @@ window.speakText = async function (text, btnElement) {
 };
 
 // STT (Speech to Text)
-// STT (Speech to Text)
 window.startListening = async function (targetText, btnId) {
     if (state.isListening) return;
 
@@ -374,41 +372,45 @@ window.startListening = async function (targetText, btnId) {
         return;
     }
 
-    // 오디오 세션 정리를 위해 TTS 중단
+    // 1. 오디오 세션 정리 (TTS 중단)
     const synth = getSynth();
     if (synth && synth.speaking) synth.cancel();
 
-    // 싱글톤 초기화
-    if (!state.recognition) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        state.recognition = new SpeechRecognition();
-        state.recognition.lang = 'ko-KR';
-        state.recognition.interimResults = false;
-        state.recognition.maxAlternatives = 1;
-        state.recognition.continuous = false;
-    }
+    // 2. 새로운 인스턴스 생성 (아이폰 사파리 안정성 위함)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
 
-    const recognition = state.recognition;
     const btn = document.getElementById(btnId);
 
     recognition.onstart = () => {
         state.isListening = true;
         btn.classList.add('recording');
-        btn.style.boxShadow = '0 0 20px #2ecc71';
+        console.log('Voice Recognition Started');
     };
 
     recognition.onend = () => {
         state.isListening = false;
         btn.classList.remove('recording');
-        btn.style.boxShadow = '';
+        console.log('Voice Recognition Ended');
     };
 
     recognition.onerror = (event) => {
         state.isListening = false;
         btn.classList.remove('recording');
-        btn.style.boxShadow = '';
         console.error('STT Error:', event.error);
-        if (event.error !== 'aborted') {
+
+        // 'aborted'와 'no-speech'는 경고창을 띄우지 않고 콘솔 로그만 남김
+        if (event.error === 'aborted') {
+            console.warn('Recognition aborted');
+        } else if (event.error === 'no-speech') {
+            console.warn('No speech detected');
+        } else if (event.error === 'not-allowed') {
+            alert('마이크 권한이 거부되었습니다. 설정에서 마이크를 허용해주세요.');
+        } else {
             alert(`음성 인식 오류: ${event.error}`);
         }
     };
@@ -430,7 +432,7 @@ window.startListening = async function (targetText, btnId) {
             setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
         } else {
             document.getElementById('feedback-icon').innerHTML = '🎯';
-            document.getElementById('feedback-title').textContent = 'फेरि प्रयास गर्नुहोस् (Try again)';
+            document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
             document.getElementById('feedback-title').style.color = '#e67e22';
             document.getElementById('feedback-sub').textContent = `"${script}"`;
             document.getElementById('feedback-text').textContent = 'Keep practicing!';
@@ -438,20 +440,16 @@ window.startListening = async function (targetText, btnId) {
         }
     };
 
-    // 하드웨어 전환을 위한 지연 로직 (핵심)
-    btn.classList.add('recording');
+    // 3. 실행 지연 (아이폰 하드웨어 전환 시간 확보)
     setTimeout(() => {
         try {
-            recognition.abort();
-            setTimeout(() => {
-                recognition.start();
-            }, 50);
+            recognition.start();
         } catch (e) {
             console.error('Start Error:', e);
             state.isListening = false;
             btn.classList.remove('recording');
         }
-    }, 200);
+    }, 300);
 };
 
 // Simple string similarity for feedback (Levenshtein distance based simplified)

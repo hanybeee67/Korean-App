@@ -276,22 +276,22 @@ h1 {
 
 /* Mic Animation */
 .recording {
-  animation: pulse-red 1.5s infinite;
-  background: var(--accent-color) !important;
+  animation: pulse-green 1.5s infinite;
+  background: #2ecc71 !important;
   color: white !important;
 }
 
-@keyframes pulse-red {
+@keyframes pulse-green {
   0% {
-    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
   }
 
   70% {
-    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+    box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
   }
 }
 
