@@ -245,6 +245,7 @@ function renderCards() {
             <div class="sentence-pronunciation">${item.Pronunciation || ''}</div>
             <div class="sentence-meaning">${item.Nepali}</div>
             <div class="card-actions">
+                <div class="interim-text" id="interim-${index}"></div>
                 <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen" style="background:#e74c3c; color:white;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
@@ -380,33 +381,43 @@ window.startListening = async function (targetText, btnId) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
-    recognition.interimResults = false;
+    recognition.interimResults = true; // 실시간 결과 활성화
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
     const btn = document.getElementById(btnId);
+    const interimEl = document.getElementById(btnId.replace('mic-', 'interim-'));
 
     recognition.onstart = () => {
         state.isListening = true;
         btn.classList.add('recording');
+        if (interimEl) interimEl.textContent = '듣고 있어요...';
         console.log('Voice Recognition Started');
     };
 
     recognition.onend = () => {
-        state.isListening = false;
-        btn.classList.remove('recording');
+        setTimeout(() => {
+            state.isListening = false;
+            btn.classList.remove('recording');
+            if (interimEl) interimEl.textContent = '';
+        }, 500);
         console.log('Voice Recognition Ended');
     };
 
     recognition.onerror = (event) => {
         state.isListening = false;
         btn.classList.remove('recording');
+        if (interimEl) interimEl.textContent = '';
         console.error('STT Error:', event.error);
 
         // 'aborted'와 'no-speech'는 경고창을 띄우지 않고 콘솔 로그만 남김
         if (event.error === 'aborted') {
             console.warn('Recognition aborted');
         } else if (event.error === 'no-speech') {
+            if (interimEl) {
+                interimEl.textContent = '⚠️ 목소리가 들리지 않습니다.';
+                setTimeout(() => { if (interimEl.textContent.includes('목소리')) interimEl.textContent = ''; }, 3000);
+            }
             console.warn('No speech detected');
         } else if (event.error === 'not-allowed') {
             alert('마이크 권한이 거부되었습니다. 설정에서 마이크를 허용해주세요.');
@@ -416,27 +427,46 @@ window.startListening = async function (targetText, btnId) {
     };
 
     recognition.onresult = (event) => {
-        const script = event.results[0][0].transcript;
-        const accuracy = compareStrings(script, targetText);
+        let interimTranscript = '';
+        let finalTranscript = '';
 
-        if (accuracy > 0.7) {
-            new Audio('clap.mp3').play().catch(e => console.log('Audio error:', e));
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
 
-            document.getElementById('feedback-icon').innerHTML = '👏';
-            document.getElementById('feedback-icon').classList.add('animate-clap');
-            document.getElementById('feedback-title').textContent = 'धेरै राम्रो! (Great!)';
-            document.getElementById('feedback-title').style.color = '#2ecc71';
-            document.getElementById('feedback-sub').textContent = `"${script}"`;
-            document.getElementById('feedback-text').textContent = 'Excellent pronunciation!';
-            openModal('feedback-modal');
-            setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
-        } else {
-            document.getElementById('feedback-icon').innerHTML = '🎯';
-            document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
-            document.getElementById('feedback-title').style.color = '#e67e22';
-            document.getElementById('feedback-sub').textContent = `"${script}"`;
-            document.getElementById('feedback-text').textContent = 'Keep practicing!';
-            openModal('feedback-modal');
+        if (interimEl && interimTranscript) {
+            interimEl.textContent = interimTranscript;
+            interimEl.style.color = '#2ecc71';
+        }
+
+        if (finalTranscript) {
+            const script = finalTranscript;
+            const accuracy = compareStrings(script, targetText);
+            if (interimEl) interimEl.textContent = '';
+
+            if (accuracy > 0.7) {
+                new Audio('clap.mp3').play().catch(e => console.log('Audio error:', e));
+
+                document.getElementById('feedback-icon').innerHTML = '👏';
+                document.getElementById('feedback-icon').classList.add('animate-clap');
+                document.getElementById('feedback-title').textContent = 'धेरै राम्रो! (Great!)';
+                document.getElementById('feedback-title').style.color = '#2ecc71';
+                document.getElementById('feedback-sub').textContent = `"${script}"`;
+                document.getElementById('feedback-text').textContent = 'Excellent pronunciation!';
+                openModal('feedback-modal');
+                setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
+            } else {
+                document.getElementById('feedback-icon').innerHTML = '🎯';
+                document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
+                document.getElementById('feedback-title').style.color = '#e67e22';
+                document.getElementById('feedback-sub').textContent = `"${script}"`;
+                document.getElementById('feedback-text').textContent = 'Keep practicing!';
+                openModal('feedback-modal');
+            }
         }
     };
 

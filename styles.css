@@ -63,6 +63,7 @@ h1 {
   letter-spacing: -0.5px;
   background: linear-gradient(to right, var(--text-main), var(--accent-color));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
 }
@@ -239,10 +240,28 @@ h1 {
   padding-top: 12px;
 }
 
+/* Interim Text */
+.interim-text {
+  flex-grow: 1;
+  font-size: 0.85rem;
+  color: #2ecc71;
+  font-weight: 500;
+  text-align: left;
+  padding-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  min-height: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
 /* Action Buttons */
 .card-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
   margin-top: 16px;
 }
