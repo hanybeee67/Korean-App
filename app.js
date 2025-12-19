@@ -20,7 +20,8 @@ const state = {
     data: [],
     categories: ['All'],
     activeCategory: 'All',
-    isListening: false
+    isListening: false,
+    recognition: null // 전역 싱글톤 인스턴스 저장
 };
 
 // Google Sheet Published CSV URL
@@ -355,13 +356,14 @@ window.speakText = async function (text, btnElement) {
 };
 
 // STT (Speech to Text)
-window.startListening = function (targetText, btnId) {
-    // Browser/Platform Detection
+// STT (Speech to Text)
+window.startListening = async function (targetText, btnId) {
+    if (state.isListening) return;
+
     const userAgent = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/i.test(userAgent);
     const isKakaotalk = /kakaotalk/i.test(userAgent);
 
-    // iOS KakaoTalk In-App Browser Limitation
     if (isIOS && isKakaotalk) {
         alert('⚠️ 아이폰 카톡 브라우저에서는 마이크 기능이 제한됩니다.\n\n[해결 방법]\n오른쪽 하단 [⋯] 버튼을 누르고\n"Safari로 열기"를 선택해 주세요.');
         return;
@@ -372,43 +374,41 @@ window.startListening = function (targetText, btnId) {
         return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    // 오디오 세션 정리를 위해 TTS 중단
+    const synth = getSynth();
+    if (synth && synth.speaking) synth.cancel();
 
-    // iOS Safari specific settings
-    recognition.lang = 'ko-KR';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.continuous = false; // Important for iOS stability
+    // 싱글톤 초기화
+    if (!state.recognition) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        state.recognition = new SpeechRecognition();
+        state.recognition.lang = 'ko-KR';
+        state.recognition.interimResults = false;
+        state.recognition.maxAlternatives = 1;
+        state.recognition.continuous = false;
+    }
 
+    const recognition = state.recognition;
     const btn = document.getElementById(btnId);
 
     recognition.onstart = () => {
-        console.log('STT Started...');
+        state.isListening = true;
         btn.classList.add('recording');
-        // Visual feedback for recording
-        btn.style.boxShadow = '0 0 15px #2ecc71';
+        btn.style.boxShadow = '0 0 20px #2ecc71';
     };
 
     recognition.onend = () => {
-        console.log('STT Ended.');
+        state.isListening = false;
         btn.classList.remove('recording');
         btn.style.boxShadow = '';
     };
 
     recognition.onerror = (event) => {
-        console.error('STT Error:', event.error);
+        state.isListening = false;
         btn.classList.remove('recording');
         btn.style.boxShadow = '';
-
-        if (event.error === 'not-allowed') {
-            alert('마이크 권한이 거부되었습니다. 설정에서 마이크를 허용해주세요.');
-        } else if (event.error === 'network') {
-            alert('네트워크 연결 확인이 필요합니다.');
-        } else if (event.error === 'no-speech') {
-            // Silently handle no speech or show subtle toast
-            console.warn('No speech detected');
-        } else {
+        console.error('STT Error:', event.error);
+        if (event.error !== 'aborted') {
             alert(`음성 인식 오류: ${event.error}`);
         }
     };
@@ -417,54 +417,41 @@ window.startListening = function (targetText, btnId) {
         const script = event.results[0][0].transcript;
         const accuracy = compareStrings(script, targetText);
 
-        // Enhanced Feedback Modal and Sound
         if (accuracy > 0.7) {
-            // 1. Play Clap Sound
-            const audio = new Audio('clap.mp3');
-            audio.play().catch(e => console.log('Audio play failed:', e));
+            new Audio('clap.mp3').play().catch(e => console.log('Audio error:', e));
 
-            // 2. Show Modal with Animation
-            const modal = document.getElementById('feedback-modal');
-            const icon = document.getElementById('feedback-icon');
-            const title = document.getElementById('feedback-title');
-            const sub = document.getElementById('feedback-sub');
-            const text = document.getElementById('feedback-text');
-
-            icon.innerHTML = '👏';
-            icon.classList.add('animate-clap');
-            title.textContent = 'धेरै राम्रो! (Great!)';
-            title.style.color = '#2ecc71';
-            sub.textContent = `"${script}"`;
-            text.textContent = 'Excellent pronunciation!';
-
+            document.getElementById('feedback-icon').innerHTML = '👏';
+            document.getElementById('feedback-icon').classList.add('animate-clap');
+            document.getElementById('feedback-title').textContent = 'धेरै राम्रो! (Great!)';
+            document.getElementById('feedback-title').style.color = '#2ecc71';
+            document.getElementById('feedback-sub').textContent = `"${script}"`;
+            document.getElementById('feedback-text').textContent = 'Excellent pronunciation!';
             openModal('feedback-modal');
-
-            // Auto close/stop animation after some time if needed
-            setTimeout(() => icon.classList.remove('animate-clap'), 3000);
+            setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
         } else {
-            // Optional: Sad/Retry Feedback
-            const modal = document.getElementById('feedback-modal');
-            const icon = document.getElementById('feedback-icon');
-            const title = document.getElementById('feedback-title');
-            const sub = document.getElementById('feedback-sub');
-            const text = document.getElementById('feedback-text');
-
-            icon.innerHTML = '🎯';
-            icon.classList.remove('animate-clap');
-            title.textContent = 'फेरि प्रयास गर्नुहोस् (Try again)';
-            title.style.color = '#e67e22';
-            sub.textContent = `"${script}"`;
-            text.textContent = 'Keep practicing!';
-
+            document.getElementById('feedback-icon').innerHTML = '🎯';
+            document.getElementById('feedback-title').textContent = 'फेरि प्रयास गर्नुहोस् (Try again)';
+            document.getElementById('feedback-title').style.color = '#e67e22';
+            document.getElementById('feedback-sub').textContent = `"${script}"`;
+            document.getElementById('feedback-text').textContent = 'Keep practicing!';
             openModal('feedback-modal');
         }
     };
 
-    try {
-        recognition.start();
-    } catch (e) {
-        alert('마이크 권한을 확인해주세요.');
-    }
+    // 하드웨어 전환을 위한 지연 로직 (핵심)
+    btn.classList.add('recording');
+    setTimeout(() => {
+        try {
+            recognition.abort();
+            setTimeout(() => {
+                recognition.start();
+            }, 50);
+        } catch (e) {
+            console.error('Start Error:', e);
+            state.isListening = false;
+            btn.classList.remove('recording');
+        }
+    }, 200);
 };
 
 // Simple string similarity for feedback (Levenshtein distance based simplified)
