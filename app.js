@@ -374,18 +374,43 @@ window.startListening = function (targetText, btnId) {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+
+    // iOS Safari specific settings
     recognition.lang = 'ko-KR';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognition.continuous = false; // Important for iOS stability
 
     const btn = document.getElementById(btnId);
 
     recognition.onstart = () => {
+        console.log('STT Started...');
         btn.classList.add('recording');
+        // Visual feedback for recording
+        btn.style.boxShadow = '0 0 15px #2ecc71';
     };
 
     recognition.onend = () => {
+        console.log('STT Ended.');
         btn.classList.remove('recording');
+        btn.style.boxShadow = '';
+    };
+
+    recognition.onerror = (event) => {
+        console.error('STT Error:', event.error);
+        btn.classList.remove('recording');
+        btn.style.boxShadow = '';
+
+        if (event.error === 'not-allowed') {
+            alert('마이크 권한이 거부되었습니다. 설정에서 마이크를 허용해주세요.');
+        } else if (event.error === 'network') {
+            alert('네트워크 연결 확인이 필요합니다.');
+        } else if (event.error === 'no-speech') {
+            // Silently handle no speech or show subtle toast
+            console.warn('No speech detected');
+        } else {
+            alert(`음성 인식 오류: ${event.error}`);
+        }
     };
 
     recognition.onresult = (event) => {
