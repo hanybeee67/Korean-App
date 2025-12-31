@@ -20,3 +20,6 @@ android/captures/
 # Editor Directories
 .vscode/
 .idea/
+
+.env
+backup*/
