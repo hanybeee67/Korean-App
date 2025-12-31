@@ -617,24 +617,29 @@ h1 {
 
 /* --- Dark Mode Fixes for Modals --- */
 /* The modal is always white, so we must force dark text/buttons inside it */
-.modal-content .form-label {
+.modal-content,
+.modal-content h2,
+.modal-content .form-label,
+.modal-content p,
+.modal-content h3,
+.modal-content h4 {
   color: #2c3e50 !important;
 }
 
 .modal-content .btn-primary {
   background: #2c3e50 !important;
   color: white !important;
-}
-
-.modal-content h2 {
-  color: #2c3e50 !important;
+  border: 1px solid #2c3e50 !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 .modal-content .form-input,
 .modal-content .form-select {
-  background: #f8f9fa;
-  color: #333;
-  border: 1px solid #ccc;
+  background: #f8f9fa !important;
+  color: #333 !important;
+  border: 1px solid #ccc !important;
 }
 
 /* --- Dark Mode Fixes for Mission Cards --- */
@@ -651,7 +656,7 @@ h1 {
 .mission-card .sentence-meaning {
   color: #636e72 !important;
   /* Force dark grey */
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
 .mission-card .btn-icon {
