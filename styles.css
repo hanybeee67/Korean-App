@@ -614,3 +614,47 @@ h1 {
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
+
+/* --- Dark Mode Fixes for Modals --- */
+/* The modal is always white, so we must force dark text/buttons inside it */
+.modal-content .form-label {
+  color: #2c3e50 !important;
+}
+
+.modal-content .btn-primary {
+  background: #2c3e50 !important;
+  color: white !important;
+}
+
+.modal-content h2 {
+  color: #2c3e50 !important;
+}
+
+.modal-content .form-input,
+.modal-content .form-select {
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+/* --- Dark Mode Fixes for Mission Cards --- */
+/* Mission cards also have white background, need forced dark text */
+.mission-card .sentence-korean {
+  color: #2c3e50 !important;
+}
+
+.mission-card .sentence-pronunciation {
+  color: #e74c3c !important;
+  /* Force darker red */
+}
+
+.mission-card .sentence-meaning {
+  color: #636e72 !important;
+  /* Force dark grey */
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.mission-card .btn-icon {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #2c3e50 !important;
+}
