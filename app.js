@@ -37,9 +37,9 @@ const GOOGLE_SHEET_CSV_URL = './data.csv';
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
-    { Category: '인사/입장', Situation: '환영', Korean: 'APP ERROR: Google Sheet 연결 실패', Pronunciation: 'Connection Failed', Nepali: '잠시 후 다시 시도해주세요.' },
-    { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '오소 오세요', Nepali: 'स्वागत छ।' },
-    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन 하सि게स्सयो?', Nepali: 'अर्डर लिनू?' }
+    { Category: '인사/입장', Situation: '환영', Korean: '데이터 로딩 중...', Pronunciation: '잠시만 기다려 주세요', Nepali: 'Data Loading...' },
+    { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '어서 오세요', Nepali: 'स्वागत छ' },
+    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: '주문하시게써요', Nepali: 'अर्डर लिनू?' }
 ];
 
 // DOM Elements
