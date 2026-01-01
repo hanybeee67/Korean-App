@@ -3,12 +3,17 @@ const cors = require('cors');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve Static Files (Frontend) from parent directory
+app.use(express.static(path.join(__dirname, '../')));
 
 // Database Connection
 const pool = new Pool({
@@ -20,8 +25,8 @@ const pool = new Pool({
 
 // API Routes
 
-// 1. Health Check
-app.get('/', (req, res) => {
+// 1. Health Check (Renamed to prevent conflict with static index.html)
+app.get('/health', (req, res) => {
     res.send('Everest-Pay Server is Running!');
 });
 
