@@ -20,26 +20,17 @@ const state = {
     data: [],
     categories: ['All'],
     activeCategory: 'All',
-    isListening: false,
-    // Everest-Pay State
-    user: null, // { id, name, branch, total_points, level }
-    dailyMissions: [] // [{...text, completed: bool}]
+    isListening: false
 };
 
-// API Configuration
-// Use the current window location (origin) as the base URL
-// This allows the app to work regardless of the server IP change
-const API_BASE_URL = window.location.origin;
-// const API_BASE_URL = 'http://192.168.0.3:3000'; // Legacy Hardcoded IP
-
 // Google Sheet Published CSV URL
-const GOOGLE_SHEET_CSV_URL = './data.csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
-    { Category: '인사/입장', Situation: '환영', Korean: '데이터 로딩 중...', Pronunciation: '잠시만 기다려 주세요', Nepali: 'Data Loading...' },
-    { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '어서 오세요', Nepali: 'स्वागत छ' },
-    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: '주문하시게써요', Nepali: 'अर्डर लिनू?' }
+    { Category: '인사/입장', Situation: '환영', Korean: 'APP ERROR: Google Sheet 연결 실패', Pronunciation: 'Connection Failed', Nepali: '잠시 후 다시 시도해주세요.' },
+    { Category: '인사/입장', Situation: '환영', Korean: '어서 오세요.', Pronunciation: '오소 오세요', Nepali: 'स्वागत छ।' },
+    { Category: '주문', Situation: '주문', Korean: '주문하시겠어요?', Pronunciation: 'जुमुन 하सि게स्सयो?', Nepali: 'अर्डर लिनू?' }
 ];
 
 // DOM Elements
@@ -47,13 +38,6 @@ const categoryHeader = document.getElementById('category-header');
 const categoryLabel = document.getElementById('current-category-label');
 const categoryDropdown = document.getElementById('category-dropdown');
 const cardContainer = document.getElementById('card-container');
-
-// Everest-Pay DOM
-const epWidget = document.getElementById('ep-widget');
-const userLevelBadge = document.getElementById('user-level-badge');
-const userBalance = document.getElementById('user-balance');
-const missionSection = document.getElementById('mission-section');
-const missionContainer = document.getElementById('mission-container');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -73,9 +57,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Check Login
-    checkLogin();
-
     await loadData();
     renderCategories();
     renderCards();
@@ -88,12 +69,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             categoryHeader.classList.remove('open');
         }
     });
-
-    // Check query params for Admin mode
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('mode') === 'admin') {
-        renderAdminDashboard();
-    }
 });
 
 // Toggle Menu
@@ -126,27 +101,28 @@ async function loadData() {
             header: true,
             skipEmptyLines: true,
             complete: function (results) {
+                // Clear timeout if parsing completes successfully
                 clearTimeout(safetyTimeout);
+
                 if (results.data && results.data.length > 0) {
+                    // Map Google Sheet columns to App internal state
                     const mappedData = results.data.map(row => ({
-                        Category: row['Category'] || '기타',
-                        Situation: row['Situation'] || '',
-                        Korean: row['Korean'] || '',
-                        Pronunciation: row['Pronunciation'] || '',
-                        Nepali: row['Nepali'] || ''
-                    })).filter(item => item.Korean);
+                        Category: row['대분류'] || '기타',
+                        Situation: row['상황'] || '',
+                        Korean: row['한국어'] || '',
+                        Pronunciation: row['발음(नेपाली लिपि)'] || '',
+                        Nepali: row['네팔어'] || ''
+                    })).filter(item => item.Korean); // Filter out empty rows
 
                     if (mappedData.length > 0) {
                         state.data = mappedData;
                         initCategories();
                         renderCategories();
                         renderCards();
-
-                        // Initialize Daily Mission after data load
-                        initDailyMission();
                         return;
                     }
                 }
+                // If we get here, parsing failed or data was empty
                 throw new Error('Parsed data is empty');
             },
             error: function (err) {
@@ -165,8 +141,8 @@ function useFallbackData() {
     initCategories();
     renderCategories();
     renderCards();
-    initDailyMission();
 
+    // Show a toast or small alert about the error
     const msg = document.createElement('div');
     msg.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:10px 20px; border-radius:30px; z-index:9999; font-size:12px;';
     msg.textContent = 'Data loaded from backup (Connection Issue)';
@@ -210,25 +186,33 @@ const CATEGORY_TRANSLATIONS = {
 function renderCategories() {
     if (!categoryDropdown) return;
     categoryDropdown.innerHTML = '';
+
+    // Resolve Display Name for Active Category
     const activeLabel = CATEGORY_TRANSLATIONS[state.activeCategory] || state.activeCategory;
+    // Update Header Label
     categoryLabel.textContent = state.activeCategory === 'All' ? 'Choose Category (메뉴 선택)' : activeLabel;
 
     state.categories.forEach(cat => {
         const chip = document.createElement('div');
         chip.className = `chip ${state.activeCategory === cat ? 'active' : ''}`;
+
+        // Add translation if available
         const displayCat = CATEGORY_TRANSLATIONS[cat] || cat;
         chip.textContent = displayCat;
 
         chip.onclick = (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Prevent bubbling
             state.activeCategory = cat;
-            renderCategories();
+            renderCategories(); // Update active class
             renderCards();
+            // Close menu
             categoryDropdown.classList.remove('show');
             categoryHeader.classList.remove('open');
         };
         categoryDropdown.appendChild(chip);
     });
+
+    // Add 'Grid Class' to dropdown for styling
     categoryDropdown.classList.add('grid-layout');
 }
 
@@ -255,19 +239,17 @@ function renderCards() {
 
     filteredData.forEach((item, index) => {
         const card = document.createElement('div');
-        // Prevent ID conflict with mission cards
-        const uniqueId = `card-${index}`;
         card.className = 'card';
         card.innerHTML = `
             <div class="sentence-korean">${item.Korean}</div>
             <div class="sentence-pronunciation">${item.Pronunciation || ''}</div>
             <div class="sentence-meaning">${item.Nepali}</div>
             <div class="card-actions">
-                <div class="interim-text" id="interim-${uniqueId}"></div>
+                <div class="interim-text" id="interim-${index}"></div>
                 <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen" style="background:#e74c3c; color:white;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                 </button>
-                <button class="btn-icon mic-btn" id="mic-${uniqueId}" onclick="startListening('${item.Korean}', 'mic-${uniqueId}')" aria-label="Speak" style="background:#2ecc71; color:white;">
+                <button class="btn-icon mic-btn" id="mic-${index}" onclick="startListening('${item.Korean}', 'mic-${index}')" aria-label="Speak" style="background:#2ecc71; color:white;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                 </button>
             </div>
@@ -276,163 +258,42 @@ function renderCards() {
     });
 }
 
-// ------ Everest-Pay & Mission Logic ------
-
-function checkLogin() {
-    const savedUser = localStorage.getItem('everestUser');
-    if (savedUser) {
-        state.user = JSON.parse(savedUser);
-        updateHeaderUI();
-        // Sync with server if needed
-    } else {
-        openModal('login-modal');
-    }
-}
-
-window.handleLogin = async function () {
-    const branch = document.getElementById('login-branch').value;
-    const name = document.getElementById('login-name').value;
-
-    if (!branch || !name) {
-        alert('Please fill all fields (지점과 이름을 입력해주세요).');
-        return;
-    }
-
-    // Call API
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, branch })
-        });
-
-        let data = { success: false };
-        if (res.ok) {
-            data = await res.json();
-        } else {
-            console.warn('Backend not responding, using local mock');
-            // Mock Login for local testing without running server
-            data = {
-                success: true,
-                user: { id: Date.now(), name, branch, total_points: 0, level: 1 }
-            };
-        }
-
-        if (data.success) {
-            state.user = data.user;
-            localStorage.setItem('everestUser', JSON.stringify(state.user));
-            updateHeaderUI();
-            closeModal('login-modal');
-        } else {
-            alert('Login Failed (로그인 실패)');
-        }
-    } catch (e) {
-        console.error('Login Error:', e);
-        // Fallback for demo
-        state.user = { id: 999, name, branch, total_points: 0, level: 1 };
-        localStorage.setItem('everestUser', JSON.stringify(state.user));
-        updateHeaderUI();
-        closeModal('login-modal');
-    }
-}
-
-function updateHeaderUI() {
-    if (!state.user) return;
-
-    epWidget.style.display = 'flex';
-    userLevelBadge.textContent = getLevelLabel(state.user.level);
-    userBalance.textContent = state.user.total_points.toLocaleString();
-
-    // Update profile modal
-    document.getElementById('profile-name').textContent = state.user.name;
-    document.getElementById('profile-branch').textContent = state.user.branch;
-    document.getElementById('profile-balance').textContent = state.user.total_points.toLocaleString();
-}
-
-function getLevelLabel(level) {
-    if (level === 1) return '🌱 Intern (수습)';
-    if (level === 2) return '🌿 Staff (사원)';
-    if (level === 3) return '🌳 Senior (대리)';
-    if (level >= 4) return '👑 Manager (매니저)';
-    return '🌱 Intern';
-}
-
-function initDailyMission() {
-    if (state.data.length === 0) return;
-
-    // Check Local Storage for today's mission
-    const today = new Date().toISOString().split('T')[0];
-    const savedMission = JSON.parse(localStorage.getItem('everestDailyMission'));
-
-    if (savedMission && savedMission.date === today) {
-        state.dailyMissions = savedMission.missions;
-    } else {
-        // Generate New Mission (Random 2 items)
-        const candidates = state.data.sort(() => 0.5 - Math.random()).slice(0, 2);
-        state.dailyMissions = candidates.map(item => ({
-            ...item,
-            completed: false
-        }));
-        localStorage.setItem('everestDailyMission', JSON.stringify({
-            date: today,
-            missions: state.dailyMissions
-        }));
-    }
-
-    renderMissions();
-}
-
-function renderMissions() {
-    missionSection.style.display = 'block';
-    missionContainer.innerHTML = '';
-
-    state.dailyMissions.forEach((item, index) => {
-        const card = document.createElement('div');
-        const uniqueId = `mission-${index}`;
-        card.className = `card mission-card ${item.completed ? 'mission-complete' : ''}`;
-        card.innerHTML = `
-            ${item.completed ? '<div style="position:absolute; top:10px; right:10px; color:#2ecc71; font-weight:bold;">Success! (+200₩)</div>' : ''}
-            <div class="sentence-korean">${item.Korean}</div>
-            <div class="sentence-pronunciation">${item.Pronunciation || ''}</div>
-            <div class="sentence-meaning">${item.Nepali}</div>
-            <div class="card-actions">
-                <div class="interim-text" id="interim-${uniqueId}"></div>
-                <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" aria-label="Listen">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-                <button class="btn-icon mic-btn" id="mic-${uniqueId}" onclick="startListening('${item.Korean}', 'mic-${uniqueId}', true)" aria-label="Speak">
-                    <i class="fas fa-microphone"></i>
-                </button>
-            </div>
-        `;
-        missionContainer.appendChild(card);
-    });
-}
-
-// ------ Core Logic: TTS & STT ------
-
-// ... (TTS functions same as before)
+// TTS (Text to Speech) Helpers
 function getSynth() {
-    return window.speechSynthesis || window.webkitSpeechSynthesis || (navigator && navigator.speechSynthesis);
+    return window.speechSynthesis ||
+        window.webkitSpeechSynthesis ||
+        (navigator && navigator.speechSynthesis);
 }
+
 function getUtteranceClass() {
-    return window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance || window.mozSpeechSynthesisUtterance || window.msSpeechSynthesisUtterance;
+    return window.SpeechSynthesisUtterance ||
+        window.webkitSpeechSynthesisUtterance ||
+        window.mozSpeechSynthesisUtterance ||
+        window.msSpeechSynthesisUtterance;
 }
+
 let voices = [];
 function loadVoices() {
     const synth = getSynth();
-    if (synth) voices = synth.getVoices();
+    if (synth) {
+        voices = synth.getVoices();
+        console.log('Voices loaded:', voices.length);
+    }
 }
+
+// Initial voice load attempt
 if (getSynth()) {
-    if (getSynth().onvoiceschanged !== undefined) getSynth().onvoiceschanged = loadVoices;
+    if (getSynth().onvoiceschanged !== undefined) {
+        getSynth().onvoiceschanged = loadVoices;
+    }
     loadVoices();
 }
 
 window.speakText = async function (text, btnElement) {
-    // ... (Existing TTS Logic preserved)
-    const icon = btnElement ? btnElement.querySelector('i') || btnElement.querySelector('svg') : null;
+    const icon = btnElement ? btnElement.querySelector('svg') : null;
     if (icon) icon.style.opacity = '0.5';
 
+    // 1. Try Native Capacitor TTS Plugin (Best for Android 16)
     if (TextToSpeech) {
         try {
             await TextToSpeech.speak({
@@ -446,70 +307,126 @@ window.speakText = async function (text, btnElement) {
             if (icon) icon.style.opacity = '1';
             return;
         } catch (e) {
-            console.warn('Native TTS failed', e);
+            console.warn('Native TTS failed, falling back to Web Speech:', e);
         }
     }
+
+    // 2. Fallback to Web Speech API
     const synth = getSynth();
     const UtteranceClass = getUtteranceClass();
+
     if (!synth || !UtteranceClass) {
-        alert('TTS Error');
+        const isSecure = window.isSecureContext ? "Secure" : "Not Secure";
+        const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        const ua = navigator.userAgent;
+
+        alert(`[치명적 오류] 음성 재생 엔진을 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Native Plugin: ${!!TextToSpeech}\n- Synth API: ${!!synth}\n- Utterance Class: ${!!UtteranceClass}\n- Mic API: ${hasSR}\n- UA: ${ua}\n\n[해결 방법]\n안드로이드 시스템 웹뷰(WebView) 앱을 최신으로 업데이트해 주세요.`);
         if (icon) icon.style.opacity = '1';
         return;
     }
+
+    // Stop manual playback if already speaking
     synth.cancel();
+
     setTimeout(() => {
         try {
             const utterance = new UtteranceClass(text);
             utterance.lang = 'ko-KR';
             utterance.rate = 0.9;
+
+            // Resilience: Try to find a Korean voice
             let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
             if (korVoice) utterance.voice = korVoice;
+
             utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
+            utterance.onerror = (e) => {
+                if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                    console.error('TTS Error:', e.error);
+                    alert(`재생 오류: ${e.error}`);
+                }
+                if (icon) icon.style.opacity = '1';
+            };
+
             synth.speak(utterance);
-        } catch (err) { console.error(err); if (icon) icon.style.opacity = '1'; }
+        } catch (err) {
+            alert('객체 생성 실패: ' + err.message);
+            if (icon) icon.style.opacity = '1';
+        }
     }, 50);
 };
 
-// Modified STT to support Missions
-window.startListening = async function (targetText, btnId, isMission = false) {
+// STT (Speech to Text)
+window.startListening = async function (targetText, btnId) {
     if (state.isListening) return;
 
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('Browser not supported (Chrome/Safari required).');
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/i.test(userAgent);
+    const isKakaotalk = /kakaotalk/i.test(userAgent);
+
+    if (isIOS && isKakaotalk) {
+        alert('⚠️ 아이폰 카톡 브라우저에서는 마이크 기능이 제한됩니다.\n\n[해결 방법]\n오른쪽 하단 [⋯] 버튼을 누르고\n"Safari로 열기"를 선택해 주세요.');
         return;
     }
 
-    // Security Check for Microphone
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert('⚠️ 주의: 보안 연결(HTTPS)이 아닙니다.\n\n현재 IP 주소 접속 환경에서는 마이크 권한이 차단될 수 있습니다.\n(안드로이드 Chrome 설정 필요)');
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다.\n\n[권장 브라우저]\n- 안드로이드: Chrome\n- 아이폰: Safari');
+        return;
     }
 
+    // 1. 오디오 세션 정리 (TTS 중단)
+    const synth = getSynth();
+    if (synth && synth.speaking) synth.cancel();
+
+    // 2. 새로운 인스턴스 생성 (아이폰 사파리 안정성 위함)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
-    recognition.interimResults = true;
+    recognition.interimResults = true; // 실시간 결과 활성화
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
     const btn = document.getElementById(btnId);
-    // Find interim element by ID replacement
     const interimEl = document.getElementById(btnId.replace('mic-', 'interim-'));
 
     recognition.onstart = () => {
         state.isListening = true;
         btn.classList.add('recording');
-        if (interimEl) interimEl.textContent = 'Listening...';
+        if (interimEl) interimEl.textContent = '듣고 있어요...';
+        console.log('Voice Recognition Started');
     };
 
     recognition.onend = () => {
         setTimeout(() => {
             state.isListening = false;
             btn.classList.remove('recording');
-            if (interimEl && interimEl.textContent === 'Listening...') interimEl.textContent = '';
+            if (interimEl) interimEl.textContent = '';
         }, 500);
+        console.log('Voice Recognition Ended');
     };
 
-    recognition.onresult = async (event) => {
+    recognition.onerror = (event) => {
+        state.isListening = false;
+        btn.classList.remove('recording');
+        if (interimEl) interimEl.textContent = '';
+        console.error('STT Error:', event.error);
+
+        // 'aborted'와 'no-speech'는 경고창을 띄우지 않고 콘솔 로그만 남김
+        if (event.error === 'aborted') {
+            console.warn('Recognition aborted');
+        } else if (event.error === 'no-speech') {
+            if (interimEl) {
+                interimEl.textContent = '⚠️ 목소리가 들리지 않습니다.';
+                setTimeout(() => { if (interimEl.textContent.includes('목소리')) interimEl.textContent = ''; }, 3000);
+            }
+            console.warn('No speech detected');
+        } else if (event.error === 'not-allowed') {
+            alert('마이크 권한이 거부되었습니다. 설정에서 마이크를 허용해주세요.');
+        } else {
+            alert(`음성 인식 오류: ${event.error}`);
+        }
+    };
+
+    recognition.onresult = (event) => {
         let interimTranscript = '';
         let finalTranscript = '';
 
@@ -521,124 +438,56 @@ window.startListening = async function (targetText, btnId, isMission = false) {
             }
         }
 
-        if (interimEl) {
-            interimEl.textContent = finalTranscript || interimTranscript;
+        if (interimEl && interimTranscript) {
+            interimEl.textContent = interimTranscript;
             interimEl.style.color = '#2ecc71';
         }
 
         if (finalTranscript) {
-            const accuracy = compareStrings(finalTranscript, targetText);
+            const script = finalTranscript;
+            const accuracy = compareStrings(script, targetText);
+            if (interimEl) interimEl.textContent = '';
 
             if (accuracy > 0.7) {
-                // SUCCESS
-                new Audio('clap.mp3').play().catch(e => { });
+                new Audio('clap.mp3').play().catch(e => console.log('Audio error:', e));
 
-                if (isMission) {
-                    await handleMissionSuccess(targetText, btnId);
-                } else {
-                    // Regular Feedback
-                    showFeedback('Great!', finalTranscript, 'Excellent pronunciation!');
-                }
+                document.getElementById('feedback-icon').innerHTML = '👏';
+                document.getElementById('feedback-icon').classList.add('animate-clap');
+                document.getElementById('feedback-title').textContent = 'धेरै राम्रो! (Great!)';
+                document.getElementById('feedback-title').style.color = '#2ecc71';
+                document.getElementById('feedback-sub').textContent = `"${script}"`;
+                document.getElementById('feedback-text').textContent = 'Excellent pronunciation!';
+                openModal('feedback-modal');
+                setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
             } else {
-                // FAIL
-                showFeedback('Try again', finalTranscript, 'Keep practicing!');
+                document.getElementById('feedback-icon').innerHTML = '🎯';
+                document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
+                document.getElementById('feedback-title').style.color = '#e67e22';
+                document.getElementById('feedback-sub').textContent = `"${script}"`;
+                document.getElementById('feedback-text').textContent = 'Keep practicing!';
+                openModal('feedback-modal');
             }
         }
     };
 
-    recognition.start();
+    // 3. 실행 지연 (아이폰 하드웨어 전환 시간 확보)
+    setTimeout(() => {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error('Start Error:', e);
+            state.isListening = false;
+            btn.classList.remove('recording');
+        }
+    }, 300);
 };
 
-async function handleMissionSuccess(targetText, btnId) {
-    // Check if already completed
-    const missionIndex = state.dailyMissions.findIndex(m => m.Korean === targetText);
-    if (missionIndex !== -1 && !state.dailyMissions[missionIndex].completed) {
-        state.dailyMissions[missionIndex].completed = true;
-
-        // Update Local Storage
-        const today = new Date().toISOString().split('T')[0];
-        localStorage.setItem('everestDailyMission', JSON.stringify({
-            date: today,
-            missions: state.dailyMissions
-        }));
-
-        // Render update (visual complete)
-        renderMissions();
-
-        // Add Points via API
-        if (state.user) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/score/earn`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: state.user.id,
-                        points: 200,
-                        description: `Mission: ${targetText.substring(0, 10)}...`
-                    })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    state.user.total_points = data.newBalance;
-                } else {
-                    // fall back local
-                    state.user.total_points += 200;
-                }
-                localStorage.setItem('everestUser', JSON.stringify(state.user));
-                updateHeaderUI();
-
-                showFeedback('Mission Complete!', '+ 200 Won Earned', 'Points added to your wallet!');
-            } catch (e) {
-                // Offline fallback
-                state.user.total_points += 200;
-                localStorage.setItem('everestUser', JSON.stringify(state.user));
-                updateHeaderUI();
-                showFeedback('Mission Local Save', '+ 200 Won', 'Server offline, saved locally.');
-            }
-        }
-    } else {
-        showFeedback('Great!', targetText, 'You already completed this mission!');
-    }
-}
-
-function showFeedback(title, sub, text) {
-    document.getElementById('feedback-title').textContent = title;
-    document.getElementById('feedback-sub').textContent = `"${sub}"`;
-    document.getElementById('feedback-text').textContent = text;
-
-    if (title.includes('Great') || title.includes('Mission')) {
-        document.getElementById('feedback-icon').innerHTML = '👏';
-        document.getElementById('feedback-title').style.color = '#2ecc71';
-    } else {
-        document.getElementById('feedback-icon').innerHTML = '🎯';
-        document.getElementById('feedback-title').style.color = '#e67e22';
-    }
-    openModal('feedback-modal');
-}
-
+// Simple string similarity for feedback (Levenshtein distance based simplified)
 function compareStrings(s1, s2) {
     s1 = s1.replace(/\s+/g, '').replace(/[.,?!]/g, '');
     s2 = s2.replace(/\s+/g, '').replace(/[.,?!]/g, '');
+
     if (s1 === s2) return 1.0;
     if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-    return 0.5;
-}
-
-// Simple Admin Dashboard Render
-function renderAdminDashboard() {
-    document.body.innerHTML = '<h1>Admin Dashboard</h1><div id="admin-content">Loading...</div>';
-    fetch(`${API_BASE_URL}/api/admin/leaderboard`)
-        .then(res => res.json())
-        .then(data => {
-            let html = '<table border="1" style="width:100%; border-collapse:collapse;"><tr><th>Rank</th><th>Name</th><th>Branch</th><th>Points</th></tr>';
-            data.forEach((user, idx) => {
-                html += `<tr><td>${idx + 1}</td><td>${user.name}</td><td>${user.branch}</td><td>${user.total_points}</td></tr>`;
-            });
-            html += '</table>';
-            html += '<br><button onclick="location.href=\'index.html\'">Back to App</button>';
-            document.getElementById('admin-content').innerHTML = html;
-        })
-        .catch(e => {
-            document.getElementById('admin-content').innerHTML = 'Error loading admin data. Is server running?';
-        });
+    return 0.5; // Placeholder logic
 }
