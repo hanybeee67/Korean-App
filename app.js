@@ -479,6 +479,11 @@ window.startListening = async function (targetText, btnId, isMission = false) {
         return;
     }
 
+    // Security Check for Microphone
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        alert('⚠️ 주의: 보안 연결(HTTPS)이 아닙니다.\n\n현재 IP 주소 접속 환경에서는 마이크 권한이 차단될 수 있습니다.\n(안드로이드 Chrome 설정 필요)');
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
