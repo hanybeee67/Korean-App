@@ -129,11 +129,11 @@ async function loadData() {
                 clearTimeout(safetyTimeout);
                 if (results.data && results.data.length > 0) {
                     const mappedData = results.data.map(row => ({
-                        Category: row['대분류'] || '기타',
-                        Situation: row['상황'] || '',
-                        Korean: row['한국어'] || '',
-                        Pronunciation: row['발음(नेपाली लिपि)'] || '',
-                        Nepali: row['네팔어'] || ''
+                        Category: row['Category'] || '기타',
+                        Situation: row['Situation'] || '',
+                        Korean: row['Korean'] || '',
+                        Pronunciation: row['Pronunciation'] || '',
+                        Nepali: row['Nepali'] || ''
                     })).filter(item => item.Korean);
 
                     if (mappedData.length > 0) {
