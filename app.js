@@ -27,9 +27,10 @@ const state = {
 };
 
 // API Configuration
-// IMPORTANT: Change this URL to your deploying server URL when going live!
-const API_BASE_URL = 'http://192.168.0.3:3000';
-// const API_BASE_URL = 'https://your-render-app-name.onrender.com'; // Use this for production
+// Use the current window location (origin) as the base URL
+// This allows the app to work regardless of the server IP change
+const API_BASE_URL = window.location.origin;
+// const API_BASE_URL = 'http://192.168.0.3:3000'; // Legacy Hardcoded IP
 
 // Google Sheet Published CSV URL
 const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
