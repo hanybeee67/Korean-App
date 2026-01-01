@@ -33,7 +33,7 @@ const API_BASE_URL = window.location.origin;
 // const API_BASE_URL = 'http://192.168.0.3:3000'; // Legacy Hardcoded IP
 
 // Google Sheet Published CSV URL
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
+const GOOGLE_SHEET_CSV_URL = './data.csv';
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
