@@ -36,3 +36,10 @@ CREATE TABLE IF NOT EXISTS test_results (
 
 -- 초기 데이터 (지점)
 INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;
+
+-- 초기 데이터 (관리자 계정)
+INSERT INTO users (branch_id, name, password, points)
+SELECT id, 'admin', '1234', 1000
+FROM branches
+WHERE name = '동탄점'
+AND NOT EXISTS (SELECT 1 FROM users WHERE name = 'admin');
