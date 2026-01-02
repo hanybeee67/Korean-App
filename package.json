@@ -4,6 +4,7 @@
   "description": "Everest Membership App - Converted to APK",
   "main": "app.js",
   "scripts": {
+    "start": "npx serve .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
