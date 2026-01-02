@@ -20,8 +20,15 @@ const state = {
     data: [],
     categories: ['All'],
     activeCategory: 'All',
-    isListening: false
+    isListening: false,
+    // New Everest Pay State
+    user: null, // { id, name, points, branch_id }
+    todayMission: [], // Array of indices or items
+    missionStatus: {}, // { index: { attempts: 0, completed: false } }
 };
+
+// Backend URL (Change this to your Render URL in production)
+const BACKEND_URL = 'http://localhost:10000'; // Default local for testing
 
 // Google Sheet Published CSV URL
 // Google Sheet Published CSV URL (Added timestamp to prevent caching)
@@ -61,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
     renderCategories();
     renderCards();
+    updateChallengeUI();
 
     // Click outside to close menu
     document.addEventListener('click', (e) => {
@@ -467,6 +475,12 @@ window.startListening = async function (targetText, btnId) {
                 document.getElementById('feedback-text').textContent = 'Excellent pronunciation!';
                 openModal('feedback-modal');
                 setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
+
+                // --- Everest Pay Reward Logic ---
+                if (state.user && state.todayMission.includes(targetText)) {
+                    handleMissionSuccess(targetText);
+                }
+                // --------------------------------
             } else {
                 document.getElementById('feedback-icon').innerHTML = '🎯';
                 document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
@@ -499,3 +513,135 @@ function compareStrings(s1, s2) {
     if (s1.includes(s2) || s2.includes(s1)) return 0.8;
     return 0.5; // Placeholder logic
 }
+
+// ==========================================
+// Everest Pay Logic (Login & Challenge)
+// ==========================================
+
+// 1. Authentication
+window.handleLogin = async function () {
+    const name = document.getElementById('login-name').value;
+    const password = document.getElementById('login-pw').value;
+    const msg = document.getElementById('login-msg');
+
+    if (!name || !password) {
+        msg.textContent = 'Please enter name and password.';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            state.user = data.user;
+            msg.textContent = '';
+            document.getElementById('login-name').value = '';
+            document.getElementById('login-pw').value = '';
+            closeModal('login-modal');
+            updateUserUI();
+            initDailyChallenge();
+            alert(`Welcome, ${state.user.name}!`);
+        } else {
+            msg.textContent = data.message || 'Login failed';
+        }
+    } catch (e) {
+        console.error(e);
+        msg.textContent = 'Server connection failed.';
+    }
+};
+
+function updateUserUI() {
+    const btnLogin = document.getElementById('btn-login');
+    const profile = document.getElementById('user-profile');
+    const challengeSection = document.getElementById('challenge-section');
+
+    if (state.user) {
+        btnLogin.style.display = 'none';
+        profile.style.display = 'flex';
+        document.getElementById('user-name').textContent = state.user.name;
+        document.getElementById('user-points').textContent = state.user.points;
+        challengeSection.style.display = 'block';
+    } else {
+        btnLogin.style.display = 'block';
+        profile.style.display = 'none';
+        challengeSection.style.display = 'none';
+    }
+}
+
+// 2. Daily Challenge Logic
+function initDailyChallenge() {
+    // Pick 2 random sentences for today from loaded data
+    if (state.data.length > 0 && state.todayMission.length === 0) {
+        // Simple random for prototype (Seed by date in production for consistency)
+        const shuffled = [...state.data].sort(() => 0.5 - Math.random());
+        state.todayMission = shuffled.slice(0, 2).map(item => item.Korean);
+
+        // Render Mission UI
+        const container = document.getElementById('challenge-section');
+        // Clear existing mission items if any
+        const oldItems = container.querySelectorAll('.mission-item');
+        oldItems.forEach(el => el.remove());
+
+        state.todayMission.forEach((text, index) => {
+            const div = document.createElement('div');
+            div.className = 'mission-item';
+            div.style.cssText = 'background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px; margin-top: 10px; color: #333;';
+            div.innerHTML = `
+                <div style="font-weight:bold; font-size:1.1rem;">${text}</div>
+                <div style="font-size:0.8rem; color:#666;">Attempts left: <span id="attempts-${index}">2</span></div>
+                <div id="status-${index}" style="font-size:0.8rem; margin-top:5px; color:#e67e22;">Not completed yet</div>
+             `;
+            container.appendChild(div);
+
+            // Init status tracking
+            state.missionStatus[text] = { attempts: 0, completed: false, maxAttempts: 2 };
+        });
+    }
+}
+
+function updateChallengeUI() {
+    if (state.user) updateUserUI();
+}
+
+async function handleMissionSuccess(targetText) {
+    if (!state.missionStatus[targetText]) return;
+    const mission = state.missionStatus[targetText];
+
+    if (mission.completed) return; // Already done
+
+    // Mark as completed
+    mission.completed = true;
+
+    // Update UI text immediately
+    const index = state.todayMission.indexOf(targetText);
+    if (index !== -1) {
+        document.getElementById(`status-${index}`).textContent = '✅ Completed! (+150p)';
+        document.getElementById(`status-${index}`).style.color = '#2ecc71';
+    }
+
+    // Call Backend
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/reward`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: state.user.id })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            state.user.points = data.points;
+            document.getElementById('user-points').textContent = state.user.points;
+            alert('🎉 Mission Complete! 150 Points Rewarded!');
+        } else {
+            console.warn(data.message);
+        }
+    } catch (e) {
+        console.error('Reward API Error', e);
+    }
+}
+

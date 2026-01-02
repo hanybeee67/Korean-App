@@ -372,6 +372,11 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+input:focus {
+  outline: 2px solid var(--accent-color);
+  border-color: transparent;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
