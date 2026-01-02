@@ -24,7 +24,8 @@ const state = {
 };
 
 // Google Sheet Published CSV URL
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv';
+// Google Sheet Published CSV URL (Added timestamp to prevent caching)
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv&t=' + new Date().getTime();
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
@@ -105,13 +106,20 @@ async function loadData() {
                 clearTimeout(safetyTimeout);
 
                 if (results.data && results.data.length > 0) {
+                    // Normalize headers: Trim spaces from keys
+                    const headers = results.meta.fields || [];
+                    console.log('CSV Headers:', headers);
+
+                    // Find exact key for Pronunciation (handling potential encoding/space issues)
+                    const pronKey = headers.find(h => h.includes('발음') || h.includes('Pronunciation')) || '발음(नेपाली लिपि)';
+
                     // Map Google Sheet columns to App internal state
                     const mappedData = results.data.map(row => ({
-                        Category: row['대분류'] || '기타',
-                        Situation: row['상황'] || '',
-                        Korean: row['한국어'] || '',
-                        Pronunciation: row['발음(नेपाली लिपि)'] || '',
-                        Nepali: row['네팔어'] || ''
+                        Category: row['대분류'] || row['Category'] || '기타',
+                        Situation: row['상황'] || row['Situation'] || '',
+                        Korean: row['한국어'] || row['Korean'] || '',
+                        Pronunciation: row[pronKey] || row['Pronunciation'] || '',
+                        Nepali: row['네팔어'] || row['Nepali'] || ''
                     })).filter(item => item.Korean); // Filter out empty rows
 
                     if (mappedData.length > 0) {
