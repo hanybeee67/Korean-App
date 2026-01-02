@@ -28,7 +28,8 @@ const state = {
 };
 
 // Backend URL (Change this to your Render URL in production)
-const BACKEND_URL = 'http://localhost:10000'; // Default local for testing
+// Backend URL (Change this to your Render URL in production)
+const BACKEND_URL = 'https://korean-app-for-pay.onrender.com';
 
 // Google Sheet Published CSV URL
 // Google Sheet Published CSV URL (Added timestamp to prevent caching)
