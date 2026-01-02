@@ -54,8 +54,8 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Login Error:', err);
+        res.status(500).json({ success: false, message: 'Server Login Error: ' + err.message });
     }
 });
 
