@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -18,13 +20,23 @@ const pool = new Pool({
     }
 });
 
-// Test DB Connection
-pool.connect((err, client, release) => {
+// Initialize Database Schema on Startup
+pool.connect(async (err, client, release) => {
     if (err) {
         return console.error('Error acquiring client', err.stack);
     }
     console.log('Connected to PostgreSQL Database');
-    release();
+
+    try {
+        const schemaPath = path.join(__dirname, 'schema.sql');
+        const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+        await client.query(schemaSql);
+        console.log('Database Schema Applied Successfully');
+    } catch (e) {
+        console.error('Failed to apply database schema:', e);
+    } finally {
+        release();
+    }
 });
 
 // --- API Endpoints ---
