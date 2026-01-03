@@ -544,12 +544,36 @@ async function loadBranches() {
 }
 
 // 1. Authentication
+// 1. Authentication
 window.openLoginModal = function () {
     openModal('login-modal');
     loadBranches();
+    switchAuthMode('login'); // Default to login
 }
 
-window.handleLogin = async function () {
+let currentAuthMode = 'login';
+
+window.switchAuthMode = function (mode) {
+    currentAuthMode = mode;
+    const btn = document.getElementById('btn-submit-auth');
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const msg = document.getElementById('login-msg');
+
+    msg.textContent = ''; // Clear errors
+
+    if (mode === 'login') {
+        btn.textContent = 'Login (로그인)';
+        tabLogin.style.cssText = 'flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);';
+        tabRegister.style.cssText = 'flex:1; padding:10px; border:none; background:none; color:#aaa;';
+    } else {
+        btn.textContent = 'Register (가입하기)';
+        tabRegister.style.cssText = 'flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);';
+        tabLogin.style.cssText = 'flex:1; padding:10px; border:none; background:none; color:#aaa;';
+    }
+};
+
+window.handleAuthSubmit = async function () {
     const branchSelect = document.getElementById('login-branch');
     const branchId = branchSelect ? branchSelect.value : null;
     const name = document.getElementById('login-name').value;
@@ -557,12 +581,14 @@ window.handleLogin = async function () {
     const msg = document.getElementById('login-msg');
 
     if (!branchId || !name || !password) {
-        msg.textContent = 'Please select branch and enter details (지점을 선택하고 정보를 입력해주세요).';
+        msg.textContent = 'Please fill all fields (모든 정보를 입력해주세요).';
         return;
     }
 
+    const endpoint = currentAuthMode === 'login' ? '/api/login' : '/api/register';
+
     try {
-        const response = await fetch(`${BACKEND_URL}/api/login`, {
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, password, branch_id: branchId })
@@ -570,16 +596,23 @@ window.handleLogin = async function () {
         const data = await response.json();
 
         if (data.success) {
-            state.user = data.user;
-            msg.textContent = '';
-            document.getElementById('login-name').value = '';
-            document.getElementById('login-pw').value = '';
-            closeModal('login-modal');
-            updateUserUI();
-            initDailyChallenge();
-            alert(`Welcome, ${state.user.name}!`);
+            if (currentAuthMode === 'login') {
+                state.user = data.user;
+                msg.textContent = '';
+                document.getElementById('login-name').value = '';
+                document.getElementById('login-pw').value = '';
+                closeModal('login-modal');
+                updateUserUI();
+                initDailyChallenge();
+                alert(`Welcome, ${state.user.name}!`);
+            } else {
+                // Register Success -> Switch to login or auto login?
+                // Lets switch to login tab and ask to login
+                alert('Registration Successful! Please Login.');
+                switchAuthMode('login');
+            }
         } else {
-            msg.textContent = data.message || 'Login failed';
+            msg.textContent = data.message || 'Action failed';
         }
     } catch (e) {
         console.error(e);
