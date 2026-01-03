@@ -724,53 +724,56 @@ function updateChallengeUI() {
     if (state.user) updateUserUI();
 }
 
+// Updated Mission Success Handler covering Logging
 async function handleMissionSuccess(targetText) {
     if (!state.missionStatus[targetText]) return;
     const mission = state.missionStatus[targetText];
+    if (mission.completed) return;
 
-    if (mission.completed) return; // Already done
-
-    // Mark as completed
     mission.completed = true;
-
-    // Update UI text immediately
-    // Find index by checking property .Korean if state.todayMission holds objects now
     const index = state.todayMission.findIndex(item => (item.Korean || item) === targetText);
 
+    // UI Update
     if (index !== -1) {
         document.getElementById(`status-${index}`).textContent = '✅ Completed! (+150p)';
         document.getElementById(`status-${index}`).style.color = '#2ecc71';
-    }
 
-    // Call Backend
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/reward`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: state.user.id })
-        });
-        const data = await response.json();
+        // Disable buttons
+        const micBtn = document.getElementById(`mission-mic-${index}`);
+        const playBtn = micBtn.previousElementSibling; // roughly finding the sibling
+        if (micBtn) micBtn.disabled = true;
 
-        if (data.success) {
-            state.user.points = data.points;
-            document.getElementById('user-points').textContent = state.user.points;
+        // Use new endpoint
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/mission_result`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: state.user.id,
+                    sentence: targetText,
+                    result: 'success',
+                    attempts_used: mission.attempts
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                state.user.points = data.points;
+                document.getElementById('user-points').textContent = state.user.points;
 
-            // Update modal text if it is open (it should be allowed to open by startListening)
-            const modalTitle = document.getElementById('feedback-title');
-            if (modalTitle && modalTitle.textContent.includes('Great')) {
-                document.getElementById('feedback-text').textContent = 'Excellent! (+150 Points Earned)';
-                document.getElementById('feedback-text').style.color = '#27ae60';
-                document.getElementById('feedback-text').style.fontWeight = 'bold';
+                const modalTitle = document.getElementById('feedback-title');
+                if (modalTitle && modalTitle.textContent.includes('Welcome')) return; // Dont override login msg
+                if (modalTitle) {
+                    document.getElementById('feedback-text').textContent = 'Excellent! (+150 Points Earned)';
+                    document.getElementById('feedback-text').style.color = '#27ae60';
+                    document.getElementById('feedback-text').style.fontWeight = 'bold';
+                }
             }
-        } else {
-            console.warn(data.message);
-        }
-    } catch (e) {
-        console.error('Reward API Error', e);
+        } catch (e) { console.error(e); }
     }
 }
 
-function handleMissionFailure(targetText) {
+// Updated Mission Failure Handler
+async function handleMissionFailure(targetText) {
     if (!state.missionStatus[targetText]) return;
     const mission = state.missionStatus[targetText];
     if (mission.completed) return;
@@ -778,11 +781,39 @@ function handleMissionFailure(targetText) {
     mission.attempts++;
     const attemptsLeft = Math.max(0, mission.maxAttempts - mission.attempts);
 
-    // Update UI
+    // Update attempts UI
     const index = state.todayMission.findIndex(item => (item.Korean || item) === targetText);
     if (index !== -1) {
         const attemptEl = document.getElementById(`attempts-${index}`);
         if (attemptEl) attemptEl.textContent = attemptsLeft;
+
+        // Check for FAIL condition
+        if (attemptsLeft === 0) {
+            // Lock UI
+            document.getElementById(`status-${index}`).textContent = 'Today\'s Attempts Failed (Try again tomorrow)';
+            document.getElementById(`status-${index}`).style.color = '#e74c3c';
+
+            // Disable buttons
+            const micBtn = document.getElementById(`mission-mic-${index}`);
+            if (micBtn) {
+                micBtn.disabled = true;
+                micBtn.style.opacity = '0.5';
+                micBtn.parentElement.innerHTML += '<div style="font-size:0.7rem; color:red; margin-top:5px;">Locked</div>';
+            }
+
+            // Log Failure
+            try {
+                await fetch(`${BACKEND_URL}/api/mission_result`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: state.user.id,
+                        sentence: targetText,
+                        result: 'fail',
+                        attempts_used: mission.attempts
+                    })
+                });
+            } catch (e) { console.error('Log Fail Error', e); }
+        }
     }
 }
-

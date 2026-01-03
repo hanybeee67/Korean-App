@@ -59,7 +59,7 @@ pool.connect(async (err, client, release) => {
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;`);
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id INTEGER;`);
 
-        // 3. Legacy Compatibility: Remove NOT NULL constraint from 'branch' (legacy column) to allow new registration
+        // 3. Legacy Compatibility: Remove NOT NULL constraint from 'branch' (legacy column)
         await client.query(`
             DO $$ 
             BEGIN 
@@ -71,7 +71,19 @@ pool.connect(async (err, client, release) => {
             END $$;
         `);
 
-        // 4. Seed Data & Admin Logic Refined
+        // 4. Mission Logs Table (New)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS mission_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                sentence TEXT,
+                result VARCHAR(10), -- 'success' or 'fail'
+                attempts_used INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 5. Seed Data & Admin Logic Refined
         // Ensure '동탄점' exists and get its ID
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
 
@@ -156,7 +168,56 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// 3. Reward (150 Points)
+// 4. Mission Result Handling (Log & Reward)
+app.post('/api/mission_result', async (req, res) => {
+    const { userId, sentence, result, attempts_used } = req.body;
+    const REWARD_AMOUNT = 150;
+
+    try {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Log the attempt (Always log)
+            await client.query(
+                'INSERT INTO mission_logs (user_id, sentence, result, attempts_used) VALUES ($1, $2, $3, $4)',
+                [userId, sentence, result, attempts_used]
+            );
+
+            // 2. Logic for Success
+            if (result === 'success') {
+                // Check if already rewarded today for ANY mission (Limit 150pts per day per user? Or per mission?)
+                // Assuming 150pts max per day as per previous logic
+                const checkLog = await client.query(
+                    'SELECT * FROM daily_logs WHERE user_id = $1 AND date = CURRENT_DATE',
+                    [userId]
+                );
+
+                if (checkLog.rows.length === 0) {
+                    await client.query('INSERT INTO daily_logs (user_id, accumulated_points) VALUES ($1, $2)', [userId, REWARD_AMOUNT]);
+                    await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
+                }
+            }
+
+            await client.query('COMMIT');
+
+            // Get updated user points
+            const userRes = await client.query('SELECT points FROM users WHERE id = $1', [userId]);
+            res.json({ success: true, points: userRes.rows[0].points });
+
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Mission Result Error:', err);
+        res.status(500).json({ success: false, message: 'Server Log Error' });
+    }
+});
+
+// 5. Reward (150 Points)
 app.post('/api/reward', async (req, res) => {
     const { userId } = req.body;
     const REWARD_AMOUNT = 150;
@@ -208,7 +269,36 @@ app.post('/api/reward', async (req, res) => {
     }
 });
 
-// 4. Rankings (Branch Average)
+// 6. Admin Summary Endpoint
+app.get('/api/admin/summary', async (req, res) => {
+    try {
+        // Daily Stats: Group by Branch -> User
+        const date = new Date().toISOString().split('T')[0]; // Current Date
+
+        const statsQuery = `
+            SELECT 
+                b.name as branch_name,
+                u.name as user_name,
+                COUNT(CASE WHEN ml.result = 'success' THEN 1 END) as success_count,
+                COUNT(CASE WHEN ml.result = 'fail' THEN 1 END) as fail_count,
+                MAX(ml.created_at) as last_attempt
+            FROM users u
+            JOIN branches b ON u.branch_id = b.id
+            LEFT JOIN mission_logs ml ON u.id = ml.user_id AND DATE(ml.created_at) = CURRENT_DATE
+            GROUP BY b.name, u.name
+            ORDER BY b.name, u.name
+        `;
+
+        const statsResult = await pool.query(statsQuery);
+        res.json({ success: true, data: statsResult.rows });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Admin API Error' });
+    }
+});
+
+// 7. Rankings (Branch Average)
 app.get('/api/rankings', async (req, res) => {
     try {
         // This query averages the test_results. 
