@@ -183,7 +183,16 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal('login-modal')">&times;</span>
             <h2>Member Login</h2>
-            <p style="color:#666; margin-bottom: 20px;">Everest Pay Point System</p>
+            <h2>Member Login</h2>
+            <p id="modal-subtitle" style="color:#666; margin-bottom: 20px;">Everest Pay Point System</p>
+
+            <!-- Toggle Buttons -->
+            <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <button id="tab-login" onclick="switchAuthMode('login')"
+                    style="flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);">Login</button>
+                <button id="tab-register" onclick="switchAuthMode('register')"
+                    style="flex:1; padding:10px; border:none; background:none; color:#aaa;">Register</button>
+            </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="display:block; margin-bottom:5px; font-weight:bold;">Branch (지점)</label>
@@ -205,7 +214,7 @@
                     style="width:100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
             </div>
 
-            <button onclick="handleLogin()" class="btn-install btn-android"
+            <button id="btn-submit-auth" onclick="handleAuthSubmit()" class="btn-install btn-android"
                 style="width:100%; justify-content: center;">
                 Login (로그인)
             </button>
