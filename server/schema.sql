@@ -15,6 +15,26 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Migration: Ensure columns exist (Fix for "column does not exist" error)
+DO $$
+BEGIN
+    BEGIN
+        ALTER TABLE users ADD COLUMN password VARCHAR(255) DEFAULT '1234';
+    EXCEPTION
+        WHEN duplicate_column THEN RAISE NOTICE 'column password already exists';
+    END;
+    BEGIN
+        ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0;
+    EXCEPTION
+        WHEN duplicate_column THEN RAISE NOTICE 'column points already exists';
+    END;
+    BEGIN
+        ALTER TABLE users ADD COLUMN branch_id INTEGER;
+    EXCEPTION
+        WHEN duplicate_column THEN RAISE NOTICE 'column branch_id already exists';
+    END;
+END $$;
+
 -- 일일 적립 로그 (중복 방지용)
 CREATE TABLE IF NOT EXISTS daily_logs (
     id SERIAL PRIMARY KEY,
