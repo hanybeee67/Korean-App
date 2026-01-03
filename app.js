@@ -520,13 +520,44 @@ function compareStrings(s1, s2) {
 // ==========================================
 
 // 1. Authentication
+// 0. Load Branches
+async function loadBranches() {
+    const select = document.getElementById('login-branch');
+    if (!select || select.options.length > 1) return; // Already loaded
+
+    try {
+        // Add timestamp to prevent caching
+        const res = await fetch(`${BACKEND_URL}/api/branches?t=${new Date().getTime()}`);
+        const branches = await res.json();
+
+        select.innerHTML = '<option value="">Select Branch (지점 선택)</option>';
+        branches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = b.name;
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load branches', e);
+        if (select) select.innerHTML = '<option value="">Error loading branches</option>';
+    }
+}
+
+// 1. Authentication
+window.openLoginModal = function () {
+    openModal('login-modal');
+    loadBranches();
+}
+
 window.handleLogin = async function () {
+    const branchSelect = document.getElementById('login-branch');
+    const branchId = branchSelect ? branchSelect.value : null;
     const name = document.getElementById('login-name').value;
     const password = document.getElementById('login-pw').value;
     const msg = document.getElementById('login-msg');
 
-    if (!name || !password) {
-        msg.textContent = 'Please enter name and password.';
+    if (!branchId || !name || !password) {
+        msg.textContent = 'Please select branch and enter details (지점을 선택하고 정보를 입력해주세요).';
         return;
     }
 
@@ -534,7 +565,7 @@ window.handleLogin = async function () {
         const response = await fetch(`${BACKEND_URL}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, password })
+            body: JSON.stringify({ name, password, branch_id: branchId })
         });
         const data = await response.json();
 
