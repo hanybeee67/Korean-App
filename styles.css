@@ -438,6 +438,8 @@ input:focus {
   font-weight: 800;
   border-bottom: 3px solid var(--primary-color);
   color: var(--primary-color) !important;
+  font-size: 1.1rem;
+  /* Larger text */
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -447,17 +449,20 @@ input:focus {
   padding: 12px;
   border: none;
   background: none;
-  color: #95a5a6 !important;
-  /* Lighter grey */
+  color: #555 !important;
+  /* Much darker grey for readability */
+  font-size: 1.1rem;
+  font-weight: 600;
+  /* Semi-bold even when inactive */
   cursor: pointer;
-  border-bottom: 1px solid #eee;
-  font-weight: 500;
+  border-bottom: 2px solid #ddd;
+  /* Visible bottom border */
   transition: all 0.3s;
 }
 
 .inactive-tab:hover {
-  color: var(--primary-color) !important;
-  background: rgba(0, 0, 0, 0.02);
+  color: #000 !important;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .modal-close {

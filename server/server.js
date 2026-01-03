@@ -59,7 +59,19 @@ pool.connect(async (err, client, release) => {
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;`);
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id INTEGER;`);
 
-        // 3. Seed Data & Admin Logic Refined
+        // 3. Legacy Compatibility: Remove NOT NULL constraint from 'branch' (legacy column) to allow new registration
+        await client.query(`
+            DO $$ 
+            BEGIN 
+                BEGIN
+                    ALTER TABLE users ALTER COLUMN branch DROP NOT NULL;
+                EXCEPTION 
+                    WHEN undefined_column THEN RAISE NOTICE 'column branch does not exist';
+                END; 
+            END $$;
+        `);
+
+        // 4. Seed Data & Admin Logic Refined
         // Ensure '동탄점' exists and get its ID
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
 
