@@ -608,11 +608,25 @@ window.handleAuthSubmit = async function () {
                 closeModal('login-modal');
                 updateUserUI();
                 initDailyChallenge();
-                alert(`Welcome, ${state.user.name}!`);
+                initDailyChallenge();
+
+                // Show Success Modal instead of Alert
+                openModal('feedback-modal');
+                document.getElementById('feedback-icon').innerHTML = '🎉';
+                document.getElementById('feedback-title').textContent = 'Welcome!';
+                document.getElementById('feedback-title').style.color = '#2ecc71';
+                document.getElementById('feedback-sub').textContent = state.user.name;
+                document.getElementById('feedback-text').textContent = 'Successfully Logged In (로그인 성공)';
+                setTimeout(() => closeModal('feedback-modal'), 2000);
             } else {
-                // Register Success -> Switch to login or auto login?
-                // Lets switch to login tab and ask to login
-                alert('Registration Successful! Please Login.');
+                // Register Success -> Switch to login
+                openModal('feedback-modal');
+                document.getElementById('feedback-icon').innerHTML = '✨';
+                document.getElementById('feedback-title').textContent = 'Registration Complete';
+                document.getElementById('feedback-title').style.color = '#3498db';
+                document.getElementById('feedback-sub').textContent = 'Join Success';
+                document.getElementById('feedback-text').textContent = 'Please Login now (가입 성공! 로그인해주세요)';
+
                 switchAuthMode('login');
             }
         } else {
