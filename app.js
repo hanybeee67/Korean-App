@@ -478,11 +478,17 @@ window.startListening = async function (targetText, btnId) {
                 setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
 
                 // --- Everest Pay Reward Logic ---
-                if (state.user && state.todayMission.includes(targetText)) {
+                // FIX: Check against object properly (item.Korean or item if string)
+                if (state.user && state.todayMission.some(m => (m.Korean || m) === targetText)) {
                     handleMissionSuccess(targetText);
                 }
                 // --------------------------------
             } else {
+                // Decrement attempts if it is a mission item
+                if (state.user && state.todayMission.some(m => (m.Korean || m) === targetText)) {
+                    handleMissionFailure(targetText);
+                }
+
                 document.getElementById('feedback-icon').innerHTML = '🎯';
                 document.getElementById('feedback-title').textContent = '페리 प्रयास गर्नुहोस् (Try again)';
                 document.getElementById('feedback-title').style.color = '#e67e22';
@@ -748,12 +754,35 @@ async function handleMissionSuccess(targetText) {
         if (data.success) {
             state.user.points = data.points;
             document.getElementById('user-points').textContent = state.user.points;
-            alert('🎉 Mission Complete! 150 Points Rewarded!');
+
+            // Update modal text if it is open (it should be allowed to open by startListening)
+            const modalTitle = document.getElementById('feedback-title');
+            if (modalTitle && modalTitle.textContent.includes('Great')) {
+                document.getElementById('feedback-text').textContent = 'Excellent! (+150 Points Earned)';
+                document.getElementById('feedback-text').style.color = '#27ae60';
+                document.getElementById('feedback-text').style.fontWeight = 'bold';
+            }
         } else {
             console.warn(data.message);
         }
     } catch (e) {
         console.error('Reward API Error', e);
+    }
+}
+
+function handleMissionFailure(targetText) {
+    if (!state.missionStatus[targetText]) return;
+    const mission = state.missionStatus[targetText];
+    if (mission.completed) return;
+
+    mission.attempts++;
+    const attemptsLeft = Math.max(0, mission.maxAttempts - mission.attempts);
+
+    // Update UI
+    const index = state.todayMission.findIndex(item => (item.Korean || item) === targetText);
+    if (index !== -1) {
+        const attemptEl = document.getElementById(`attempts-${index}`);
+        if (attemptEl) attemptEl.textContent = attemptsLeft;
     }
 }
 
