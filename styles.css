@@ -384,7 +384,21 @@ h1 {
 input {
   transition: all 0.3s ease;
   background: #f8f9fa;
-  /* Light grey bg */
+  color: #000;
+  /* Darker input text */
+}
+
+input::placeholder {
+  color: #666;
+  /* Darker placeholder */
+  opacity: 1;
+  /* Ensure opacity */
+}
+
+select {
+  color: #000 !important;
+  /* Force darker text for select */
+  font-weight: 500;
 }
 
 input:focus {
@@ -436,8 +450,10 @@ input:focus {
   border: none;
   background: none;
   font-weight: 800;
-  border-bottom: 3px solid var(--primary-color);
-  color: var(--primary-color) !important;
+  border-bottom: 3px solid #e74c3c;
+  /* Red border */
+  color: #e74c3c !important;
+  /* Red text */
   font-size: 1.1rem;
   /* Larger text */
   cursor: pointer;
@@ -478,6 +494,13 @@ input:focus {
   margin-bottom: 20px;
   border-bottom: 1px dashed #eee;
   padding-bottom: 10px;
+}
+
+label {
+  color: #222 !important;
+  /* Darker label */
+  font-weight: 700 !important;
+}
 }
 
 .guide-step:last-child {
