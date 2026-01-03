@@ -657,12 +657,14 @@ function updateUserUI() {
 }
 
 // 2. Daily Challenge Logic
+// 2. Daily Challenge Logic
 function initDailyChallenge() {
     // Pick 2 random sentences for today from loaded data
     if (state.data.length > 0 && state.todayMission.length === 0) {
         // Simple random for prototype (Seed by date in production for consistency)
         const shuffled = [...state.data].sort(() => 0.5 - Math.random());
-        state.todayMission = shuffled.slice(0, 2).map(item => item.Korean);
+        // STORE FULL OBJECTS instead of just text
+        state.todayMission = shuffled.slice(0, 2);
 
         // Render Mission UI
         const container = document.getElementById('challenge-section');
@@ -670,19 +672,44 @@ function initDailyChallenge() {
         const oldItems = container.querySelectorAll('.mission-item');
         oldItems.forEach(el => el.remove());
 
-        state.todayMission.forEach((text, index) => {
+        state.todayMission.forEach((item, index) => {
             const div = document.createElement('div');
             div.className = 'mission-item';
-            div.style.cssText = 'background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px; margin-top: 10px; color: #333;';
+            // Use card styling for consistency but simpler
+            div.style.cssText = 'background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; margin-top: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+
+            // Unique IDs for this mission instance
+            const micId = `mission-mic-${index}`;
+            const interimId = `mission-interim-${index}`;
+
             div.innerHTML = `
-                <div style="font-weight:bold; font-size:1.1rem;">${text}</div>
-                <div style="font-size:0.8rem; color:#666;">Attempts left: <span id="attempts-${index}">2</span></div>
-                <div id="status-${index}" style="font-size:0.8rem; margin-top:5px; color:#e67e22;">Not completed yet</div>
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                     <div style="font-weight:bold; font-size:1.2rem; margin-bottom:4px; color:#2c3e50;">${item.Korean}</div>
+                     <div style="font-size:0.9rem; color:#e74c3c; font-weight:500;">${item.Pronunciation || ''}</div>
+                     <div style="font-size:0.95rem; color:#555; margin-top:4px;">${item.Nepali}</div>
+                </div>
+
+                <div class="card-actions" style="margin-top: 10px; justify-content: space-between; align-items: flex-end;">
+                     <div style="flex-grow:1;">
+                        <div style="font-size:0.8rem; color:#666;">Attempts left: <span id="attempts-${index}">2</span></div>
+                        <div id="status-${index}" style="font-size:0.85rem; font-weight:bold; margin-top:2px; color:#e67e22;">Mission Ready</div>
+                        <div id="${interimId}" class="interim-text" style="font-size:0.9rem; height:1.5rem;"></div>
+                     </div>
+
+                     <div style="display:flex; gap:10px;">
+                        <button class="btn-icon play-btn" onclick="speakText('${item.Korean}', this)" style="background:#e74c3c; color:white; width:40px; height:40px;">
+                             <i class="fas fa-volume-up"></i>
+                        </button>
+                        <button class="btn-icon mic-btn" id="${micId}" onclick="startListening('${item.Korean}', '${micId}')" style="background:#2ecc71; color:white; width:40px; height:40px;">
+                             <i class="fas fa-microphone"></i>
+                        </button>
+                     </div>
+                </div>
              `;
             container.appendChild(div);
 
-            // Init status tracking
-            state.missionStatus[text] = { attempts: 0, completed: false, maxAttempts: 2 };
+            // Init status tracking using Korean text as key
+            state.missionStatus[item.Korean] = { attempts: 0, completed: false, maxAttempts: 2 };
         });
     }
 }
@@ -701,7 +728,9 @@ async function handleMissionSuccess(targetText) {
     mission.completed = true;
 
     // Update UI text immediately
-    const index = state.todayMission.indexOf(targetText);
+    // Find index by checking property .Korean if state.todayMission holds objects now
+    const index = state.todayMission.findIndex(item => (item.Korean || item) === targetText);
+
     if (index !== -1) {
         document.getElementById(`status-${index}`).textContent = '✅ Completed! (+150p)';
         document.getElementById(`status-${index}`).style.color = '#2ecc71';
