@@ -59,20 +59,30 @@ pool.connect(async (err, client, release) => {
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;`);
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id INTEGER;`);
 
-        // 3. Seed Data
+        // 3. Seed Data & Admin Logic Refined
+        // Ensure '동탄점' exists and get its ID
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
 
-        // Admin user creation (Ensure admin exists)
-        await client.query(`
-            INSERT INTO users (branch_id, name, password, points)
-            SELECT id, 'admin', '1234', 1000
-            FROM branches
-            WHERE name = '동탄점'
-            AND NOT EXISTS (SELECT 1 FROM users WHERE name = 'admin');
-        `);
+        let branchResult = await client.query(`SELECT id FROM branches WHERE name = '동탄점'`);
+        // Fallback: If for some reason select fails (unlikely), default to null or try inserting again
+        if (branchResult.rows.length === 0) {
+            const insertBranch = await client.query(`INSERT INTO branches (name) VALUES ('동탄점') RETURNING id`);
+            branchResult = insertBranch;
+        }
 
-        // FORCE RESET ADMIN PASSWORD (To fix Login Issues)
-        await client.query(`UPDATE users SET password = '1234' WHERE name = 'admin';`);
+        if (branchResult.rows.length > 0) {
+            const branchId = branchResult.rows[0].id;
+
+            // Ensure 'admin' exists
+            const adminResult = await client.query(`SELECT id FROM users WHERE name = 'admin'`);
+            if (adminResult.rows.length === 0) {
+                await client.query(`INSERT INTO users (name, password, branch_id, points) VALUES ('admin', '1234', $1, 1000)`, [branchId]);
+                console.log('Admin user created successfully');
+            } else {
+                await client.query(`UPDATE users SET password = '1234' WHERE name = 'admin'`);
+                console.log('Admin password reset successfully');
+            }
+        }
 
         console.log('Database Schema & Migrations Applied Successfully');
     } catch (e) {
