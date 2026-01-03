@@ -1,8 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -28,10 +26,52 @@ pool.connect(async (err, client, release) => {
     console.log('Connected to PostgreSQL Database');
 
     try {
-        const schemaPath = path.join(__dirname, 'schema.sql');
-        const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-        await client.query(schemaSql);
-        console.log('Database Schema Applied Successfully');
+        console.log('Checking database schema...');
+
+        // 1. Create Basic Tables
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS branches (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(50) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                branch_id INTEGER REFERENCES branches(id),
+                name VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS daily_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                accumulated_points INTEGER NOT NULL,
+                date DATE DEFAULT CURRENT_DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, date)
+            );
+        `);
+
+        // 2. Migrations: Add missing columns safely (IF NOT EXISTS)
+        // This fixes the 'column password does not exist' error on existing tables
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '1234';`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id INTEGER;`);
+
+        // 3. Seed Data
+        await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
+
+        // Admin user creation
+        await client.query(`
+            INSERT INTO users (branch_id, name, password, points)
+            SELECT id, 'admin', '1234', 1000
+            FROM branches
+            WHERE name = '동탄점'
+            AND NOT EXISTS (SELECT 1 FROM users WHERE name = 'admin');
+        `);
+
+        console.log('Database Schema & Migrations Applied Successfully');
     } catch (e) {
         console.error('Failed to apply database schema:', e);
     } finally {
