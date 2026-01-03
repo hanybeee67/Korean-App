@@ -62,7 +62,7 @@ pool.connect(async (err, client, release) => {
         // 3. Seed Data
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
 
-        // Admin user creation
+        // Admin user creation (Ensure admin exists)
         await client.query(`
             INSERT INTO users (branch_id, name, password, points)
             SELECT id, 'admin', '1234', 1000
@@ -70,6 +70,9 @@ pool.connect(async (err, client, release) => {
             WHERE name = '동탄점'
             AND NOT EXISTS (SELECT 1 FROM users WHERE name = 'admin');
         `);
+
+        // FORCE RESET ADMIN PASSWORD (To fix Login Issues)
+        await client.query(`UPDATE users SET password = '1234' WHERE name = 'admin';`);
 
         console.log('Database Schema & Migrations Applied Successfully');
     } catch (e) {
@@ -85,14 +88,20 @@ pool.connect(async (err, client, release) => {
 app.post('/api/login', async (req, res) => {
     const { name, password } = req.body;
     try {
-        // Simple login (In production, hash passwords!)
-        const result = await pool.query('SELECT * FROM users WHERE name = $1 AND password = $2', [name, password]);
-        if (result.rows.length > 0) {
-            const user = result.rows[0];
-            res.json({ success: true, user: { id: user.id, name: user.name, points: user.points, branch_id: user.branch_id } });
-        } else {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
+        // Detailed Login Check
+        const userResult = await pool.query('SELECT * FROM users WHERE name = $1', [name]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ success: false, message: 'User not found (계정을 찾을 수 없습니다)' });
         }
+
+        const user = userResult.rows[0];
+        if (user.password !== password) {
+            return res.status(401).json({ success: false, message: 'Incorrect password (비밀번호가 틀렸습니다)' });
+        }
+
+        res.json({ success: true, user: { id: user.id, name: user.name, points: user.points, branch_id: user.branch_id } });
+
     } catch (err) {
         console.error('Login Error:', err);
         res.status(500).json({ success: false, message: 'Server Login Error: ' + err.message });
