@@ -94,15 +94,26 @@ pool.connect(async (err, client, release) => {
 
 // --- API Endpoints ---
 
-// 1. Login
+// 1. Get Branches
+app.get('/api/branches', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name FROM branches ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Failed to fetch branches' });
+    }
+});
+
+// 2. Login
 app.post('/api/login', async (req, res) => {
-    const { name, password } = req.body;
+    const { name, password, branch_id } = req.body;
     try {
         // Detailed Login Check
-        const userResult = await pool.query('SELECT * FROM users WHERE name = $1', [name]);
+        const userResult = await pool.query('SELECT * FROM users WHERE name = $1 AND branch_id = $2', [name, branch_id]);
 
         if (userResult.rows.length === 0) {
-            return res.status(401).json({ success: false, message: 'User not found (계정을 찾을 수 없습니다)' });
+            return res.status(401).json({ success: false, message: 'User not found in this branch (해당 지점에 계정이 없습니다)' });
         }
 
         const user = userResult.rows[0];
