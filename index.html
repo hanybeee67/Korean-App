@@ -59,25 +59,7 @@
             </div>
         </div>
 
-        <!-- Install & Guide Section -->
-        <div id="install-section" class="install-banner">
-            <h3>📱 Install Everest App</h3>
-            <p style="font-size:0.85rem; opacity:0.9;">Installation & Sound Settings Guide for Staff<br>(कर्मचारीहरूको
-                लागि स्थापना र ध्वनि सेटिङ गाइड)</p>
-            <div class="install-actions">
-                <a href="https://drive.google.com/file/d/1jhNrD_c_0c8bwKndu_QsBQXspxTd8HaQ/view?usp=sharing"
-                    target="_blank" class="btn-install btn-android">
-                    <i class="fab fa-android"></i> Android APK
-                </a>
-                <button onclick="openModal('ios-modal')" class="btn-install btn-help">
-                    <i class="fab fa-apple"></i> iPhone Guide
-                </button>
-                <button onclick="openModal('sound-modal')" class="btn-install btn-help"
-                    style="border-color:#ffcc00; color:#ffcc00;">
-                    <i class="fas fa-volume-up"></i> Sound Help
-                </button>
-            </div>
-        </div>
+        <!-- Install & Guide Section Removed -->
 
         <!-- Category Dropdown System -->
         <div class="category-wrapper">
@@ -183,15 +165,13 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal('login-modal')">&times;</span>
             <h2>Member Login</h2>
-            <h2>Member Login</h2>
             <p id="modal-subtitle" style="color:#666; margin-bottom: 20px;">Everest Pay Point System</p>
 
             <!-- Toggle Buttons -->
-            <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                <button id="tab-login" onclick="switchAuthMode('login')"
-                    style="flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);">Login</button>
-                <button id="tab-register" onclick="switchAuthMode('register')"
-                    style="flex:1; padding:10px; border:none; background:none; color:#aaa;">Register</button>
+            <!-- Toggle Buttons -->
+            <div style="display:flex; gap:0; margin-bottom:25px; border-bottom:1px solid #eee;">
+                <button id="tab-login" onclick="switchAuthMode('login')" class="active-tab">Login</button>
+                <button id="tab-register" onclick="switchAuthMode('register')" class="inactive-tab">Register</button>
             </div>
 
             <div style="margin-bottom: 15px;">

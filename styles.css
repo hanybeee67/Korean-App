@@ -52,9 +52,12 @@ body {
 
 /* Header */
 header {
-  padding: 24px 20px;
+  padding: 40px 20px 20px;
+  /* More top padding */
   text-align: center;
   margin-bottom: 20px;
+  position: relative;
+  /* Ensure relative positioning for absolute children */
 }
 
 h1 {
@@ -357,8 +360,14 @@ h1 {
 }
 
 .btn-android {
-  background: #2ecc71;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
   color: white;
+  box-shadow: 0 4px 6px rgba(46, 204, 113, 0.3);
+}
+
+.btn-android:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(46, 204, 113, 0.4);
 }
 
 .btn-ios {
@@ -372,9 +381,18 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+input {
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+  /* Light grey bg */
+}
+
 input:focus {
-  outline: 2px solid var(--accent-color);
-  border-color: transparent;
+  outline: none;
+  border-color: var(--accent-color) !important;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+  /* Subtle glow */
 }
 
 /* Modal Styles */
@@ -407,6 +425,39 @@ input:focus {
   color: #2c3e50;
   margin-top: 0;
   font-size: 1.3rem;
+  margin-bottom: 20px;
+  /* Add spacing */
+}
+
+/* Tab Styles */
+.active-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: none;
+  font-weight: 800;
+  border-bottom: 3px solid var(--primary-color);
+  color: var(--primary-color) !important;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.inactive-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: none;
+  color: #95a5a6 !important;
+  /* Lighter grey */
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.inactive-tab:hover {
+  color: var(--primary-color) !important;
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .modal-close {

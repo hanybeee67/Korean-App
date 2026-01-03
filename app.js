@@ -564,12 +564,16 @@ window.switchAuthMode = function (mode) {
 
     if (mode === 'login') {
         btn.textContent = 'Login (로그인)';
-        tabLogin.style.cssText = 'flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);';
-        tabRegister.style.cssText = 'flex:1; padding:10px; border:none; background:none; color:#aaa;';
+        tabLogin.classList.add('active-tab');
+        tabLogin.classList.remove('inactive-tab');
+        tabRegister.classList.add('inactive-tab');
+        tabRegister.classList.remove('active-tab');
     } else {
         btn.textContent = 'Register (가입하기)';
-        tabRegister.style.cssText = 'flex:1; padding:10px; border:none; background:none; font-weight:bold; border-bottom:2px solid var(--primary-color); color:var(--primary-color);';
-        tabLogin.style.cssText = 'flex:1; padding:10px; border:none; background:none; color:#aaa;';
+        tabRegister.classList.add('active-tab');
+        tabRegister.classList.remove('inactive-tab');
+        tabLogin.classList.add('inactive-tab');
+        tabLogin.classList.remove('active-tab');
     }
 };
 
