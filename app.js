@@ -613,8 +613,8 @@ window.handleAuthSubmit = async function () {
                 document.getElementById('login-pw').value = '';
                 closeModal('login-modal');
                 updateUserUI();
-                initDailyChallenge();
-                initDailyChallenge();
+                initDailyChallenge(); // Init Daily Mission First (Seeded)
+                checkAndStartMonthlyTest(); // Then Check for Monthly Test
 
                 // Show Success Modal instead of Alert
                 openModal('feedback-modal');
@@ -644,6 +644,40 @@ window.handleAuthSubmit = async function () {
     }
 };
 
+// ==========================================
+// Seeded Random for Unified Daily Missions
+// ==========================================
+class SeededRandom {
+    constructor(seed) {
+        this.seed = this.cyrb128(seed);
+    }
+    cyrb128(str) {
+        let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+        for (let i = 0, k; i < str.length; i++) {
+            k = str.charCodeAt(i);
+            h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+            h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+            h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+            h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+        }
+        h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+        h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+        h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+        h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+        return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
+    }
+    next() {
+        let [a, b, c, d] = this.seed;
+        a |= 0; b |= 0; c |= 0; d |= 0;
+        let t = (a + b | 0) + d | 0;
+        d = d + 1 | 0; a = b ^ b >>> 9;
+        b = c + (c << 3) | 0; c = (c << 21 | c >>> 11);
+        c = c + t | 0;
+        this.seed = [a, b, c, d];
+        return (t >>> 0) / 4294967296;
+    }
+}
+
 function updateUserUI() {
     const btnLogin = document.getElementById('btn-login');
     const profile = document.getElementById('user-profile');
@@ -662,15 +696,21 @@ function updateUserUI() {
     }
 }
 
-// 2. Daily Challenge Logic
-// 2. Daily Challenge Logic
+// 2. Daily Challenge Logic (Deterministic)
 function initDailyChallenge() {
-    // Pick 2 random sentences for today from loaded data
     if (state.data.length > 0 && state.todayMission.length === 0) {
-        // Simple random for prototype (Seed by date in production for consistency)
-        const shuffled = [...state.data].sort(() => 0.5 - Math.random());
-        // STORE FULL OBJECTS instead of just text
-        state.todayMission = shuffled.slice(0, 2);
+        // USE DATE SEED for Consistency
+        const todayStr = new Date().toDateString(); // e.g. "Fri Jan 03 2026"
+        const rng = new SeededRandom(todayStr);
+
+        // Shuffle with seeded RNG
+        const pool = [...state.data];
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(rng.next() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+
+        state.todayMission = pool.slice(0, 2);
 
         // Render Mission UI
         const container = document.getElementById('challenge-section');

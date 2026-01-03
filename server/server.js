@@ -83,7 +83,19 @@ pool.connect(async (err, client, release) => {
             );
         `);
 
-        // 5. Seed Data & Admin Logic Refined
+        // 5. Monthly Test Results Table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS test_results (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                score INTEGER NOT NULL,
+                result VARCHAR(10), -- 'PASS' or 'FAIL'
+                test_month VARCHAR(7), -- '2025-01'
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 6. Seed Data & Admin Logic Refined
         // Ensure '동탄점' exists and get its ID
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
 
@@ -269,7 +281,22 @@ app.post('/api/reward', async (req, res) => {
     }
 });
 
-// 6. Admin Summary Endpoint
+// 6. Monthly Test Submission
+app.post('/api/monthly_test', async (req, res) => {
+    const { userId, score, result, month } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO test_results (user_id, score, result, test_month) VALUES ($1, $2, $3, $4)',
+            [userId, score, result, month]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Test Submit Error' });
+    }
+});
+
+// 7. Admin Summary Endpoint
 app.get('/api/admin/summary', async (req, res) => {
     try {
         // Daily Stats: Group by Branch -> User
