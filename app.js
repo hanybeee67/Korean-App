@@ -352,9 +352,11 @@ window.speakText = async function (text, btnElement) {
             utterance.lang = 'ko-KR';
 
             // --- iOS Optimization ---
+            // --- iOS Optimization ---
             if (isIOS) {
                 // iPhone defaults to a very slow rate for Korean sometimes. Boost it.
-                utterance.rate = 1.1;
+                // User Feedback: "Too fast" at 1.1 -> Lowering to 0.85
+                utterance.rate = 0.85;
 
                 // Voice Selection Strategy for iOS
                 // Try to find high quality Apple voices
@@ -414,12 +416,9 @@ window.startListening = async function (targetText, btnId) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
-    recognition.continuous = false; // iOS requires this to be false for best results
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.interimResults = true; // 실시간 결과 활성화
-    recognition.maxAlternatives = 1;
     recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
     const btn = document.getElementById(btnId);
     const interimEl = document.getElementById(btnId.replace('mic-', 'interim-'));
