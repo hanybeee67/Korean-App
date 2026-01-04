@@ -95,6 +95,12 @@ pool.connect(async (err, client, release) => {
             );
         `);
 
+        // --- MIGRATION FIX: Ensure columns exist if table was created earlier ---
+        await client.query(`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS result VARCHAR(10);`);
+        await client.query(`ALTER TABLE mission_logs ADD COLUMN IF NOT EXISTS result VARCHAR(10);`);
+        await client.query(`ALTER TABLE mission_logs ADD COLUMN IF NOT EXISTS sentence TEXT;`);
+        // -----------------------------------------------------------------------
+
         // 6. Seed Data & Admin Logic Refined
         // Ensure '동탄점' exists and get its ID
         await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
