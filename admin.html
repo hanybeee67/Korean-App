@@ -88,6 +88,10 @@
             (새로고침)</button>
     </div>
 
+    <div id="rankings-content" style="margin-bottom:30px;">
+        <!-- Ranking Table -->
+    </div>
+
     <div id="dashboard-content">
         <div class="loading">Loading Admin Data...</div>
     </div>
@@ -104,10 +108,53 @@
 
                 if (!json.success) throw new Error(json.message);
 
+                renderRankings(json.rankings);
                 renderDashboard(json.data);
             } catch (e) {
                 document.getElementById('dashboard-content').innerHTML = `<div style="color:red; text-align:center;">Failed to load data: ${e.message}</div>`;
             }
+        }
+
+        function renderRankings(rankings) {
+            const container = document.getElementById('rankings-content');
+            if (!rankings || rankings.length === 0) {
+                container.innerHTML = '<div style="color:#999; text-align:center; padding:10px;">No Test Data Yet</div>';
+                return;
+            }
+
+            let html = `
+                <div class="dashboard-card" style="background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%); border: 1px solid #eee;">
+                    <h3 style="margin-top:0; color:#2c3e50;">🏆 Branch Rankings (Month Test Avg)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="10%">Rank</th>
+                                <th>Branch</th>
+                                <th>Avg Score</th>
+                                <th>Participants</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            rankings.forEach((r, index) => {
+                let badge = index + 1;
+                if (index === 0) badge = '🥇';
+                else if (index === 1) badge = '🥈';
+                else if (index === 2) badge = '🥉';
+
+                html += `
+                    <tr>
+                        <td style="font-size:1.2rem; text-align:center;">${badge}</td>
+                        <td style="font-weight:bold;">${r.branch_name}</td>
+                        <td style="color:#2ecc71; font-weight:800;">${r.avg_score}점</td>
+                        <td>${r.participant_count}명</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
         }
 
         function renderDashboard(data) {

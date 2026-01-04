@@ -327,43 +327,66 @@ app.post('/api/monthly_test', async (req, res) => {
 });
 
 // 7. Admin Summary Endpoint
+// 7. Admin Summary Endpoint
 app.get('/api/admin/summary', async (req, res) => {
     try {
-        // Admin Summary: Daily Stats + Monthly Financials + Test Results
         const date = new Date();
         const year = date.getFullYear();
         const monthStr = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
         const todayStr = date.toISOString().split('T')[0];
 
-        const statsQuery = `
+        // 1. User Stats (Financials + Today + Test)
+        // Fixed: Use subqueries in SELECT to avoid grouping complexity or JOIN fan-out issues
+        const userStatsQuery = `
             SELECT 
                 b.name as branch_name,
                 u.name as user_name,
-                -- Today's Stats
-                COUNT(CASE WHEN ml.result = 'success' AND DATE(ml.created_at) = CURRENT_DATE THEN 1 END) as success_count,
-                MAX(CASE WHEN ml.result IS NOT NULL AND DATE(ml.created_at) = CURRENT_DATE THEN ml.created_at END) as last_attempt,
                 
-                -- Financials
+                -- Today's Mission Status
+                (SELECT COUNT(*) FROM mission_logs ml WHERE ml.user_id = u.id AND ml.result = 'success' AND DATE(ml.created_at) = CURRENT_DATE) as success_count,
+                (SELECT COUNT(*) FROM mission_logs ml WHERE ml.user_id = u.id AND ml.result = 'fail' AND DATE(ml.created_at) = CURRENT_DATE) as fail_count,
+                (SELECT MAX(created_at) FROM mission_logs ml WHERE ml.user_id = u.id AND DATE(ml.created_at) = CURRENT_DATE) as last_attempt,
+
+                -- Financials (Daily Logs)
                 COALESCE((SELECT accumulated_points FROM daily_logs dl WHERE dl.user_id = u.id AND dl.date = CURRENT_DATE), 0) as today_points,
                 COALESCE((SELECT SUM(accumulated_points) FROM daily_logs dl WHERE dl.user_id = u.id AND TO_CHAR(dl.date, 'YYYY-MM') = '${monthStr}'), 0) as monthly_points,
-                
+
                 -- Monthly Test
-                tr.score as test_score,
-                tr.result as test_result
+                (SELECT score FROM test_results tr WHERE tr.user_id = u.id AND tr.test_month = '${monthStr}' LIMIT 1) as test_score,
+                (SELECT result FROM test_results tr WHERE tr.user_id = u.id AND tr.test_month = '${monthStr}' LIMIT 1) as test_result
+
             FROM users u
             JOIN branches b ON u.branch_id = b.id
-            LEFT JOIN mission_logs ml ON u.id = ml.user_id AND DATE(ml.created_at) = CURRENT_DATE
-            LEFT JOIN test_results tr ON u.id = tr.user_id AND tr.test_month = '${monthStr}'
-            GROUP BY b.name, u.name, u.id, tr.score, tr.result
             ORDER BY b.name, u.name
         `;
 
-        const statsResult = await pool.query(statsQuery);
-        res.json({ success: true, data: statsResult.rows });
+        const userStats = await pool.query(userStatsQuery);
+
+        // 2. Branch Rankings (Avg Test Score)
+        const rankingQuery = `
+            SELECT 
+                b.name as branch_name, 
+                ROUND(AVG(tr.score), 1) as avg_score, 
+                COUNT(tr.id) as participant_count
+            FROM branches b
+            JOIN users u ON b.id = u.branch_id
+            JOIN test_results tr ON u.id = tr.user_id
+            WHERE tr.test_month = '${monthStr}'
+            GROUP BY b.name
+            ORDER BY avg_score DESC
+        `;
+
+        const rankings = await pool.query(rankingQuery);
+
+        res.json({
+            success: true,
+            data: userStats.rows,
+            rankings: rankings.rows
+        });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Admin API Error' });
+        console.error('Admin API Error:', err);
+        res.status(500).json({ success: false, message: 'Server Error: ' + err.message });
     }
 });
 
