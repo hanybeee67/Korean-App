@@ -181,6 +181,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // 4. Mission Result Handling (Log & Reward)
+// 4. Mission Result Handling (Log & Reward)
 app.post('/api/mission_result', async (req, res) => {
     const { userId, sentence, result, attempts_used } = req.body;
     const REWARD_AMOUNT = 150;
@@ -196,26 +197,55 @@ app.post('/api/mission_result', async (req, res) => {
                 [userId, sentence, result, attempts_used]
             );
 
-            // 2. Logic for Success
+            let message = 'Mission Completed';
+            let newPoints = 0;
+
+            // 2. Logic for Success: Check Daily Progress
             if (result === 'success') {
-                // Check if already rewarded today for ANY mission (Limit 150pts per day per user? Or per mission?)
-                // Assuming 150pts max per day as per previous logic
-                const checkLog = await client.query(
-                    'SELECT * FROM daily_logs WHERE user_id = $1 AND date = CURRENT_DATE',
+                // Get count of UNIQUE successful sentences for today (including this one)
+                const todayStats = await client.query(
+                    `SELECT COUNT(DISTINCT sentence) as cnt 
+                     FROM mission_logs 
+                     WHERE user_id = $1 
+                     AND result = 'success' 
+                     AND DATE(created_at) = CURRENT_DATE`,
                     [userId]
                 );
 
-                if (checkLog.rows.length === 0) {
-                    await client.query('INSERT INTO daily_logs (user_id, accumulated_points) VALUES ($1, $2)', [userId, REWARD_AMOUNT]);
-                    await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
+                const successCount = parseInt(todayStats.rows[0].cnt);
+
+                if (successCount === 1) {
+                    // First mission done
+                    message = '다음 문장도 성공하면 150원을 받아요!';
+                } else if (successCount === 2) {
+                    // Second mission done -> Check if reward already given today
+                    const checkLog = await client.query(
+                        'SELECT * FROM daily_logs WHERE user_id = $1 AND date = CURRENT_DATE',
+                        [userId]
+                    );
+
+                    if (checkLog.rows.length === 0) {
+                        // Grant Reward
+                        await client.query('INSERT INTO daily_logs (user_id, accumulated_points) VALUES ($1, $2)', [userId, REWARD_AMOUNT]);
+                        await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
+                        message = '축하합니다! 150원 획득!';
+                    } else {
+                        // Already rewarded (maybe re-doing 2nd mission?)
+                        message = '오늘의 미션을 모두 완료했습니다!';
+                    }
+                } else {
+                    // More than 2?
+                    message = '오늘의 미션을 모두 완료했습니다!';
                 }
+            } else {
+                message = 'Try Again!';
             }
 
             await client.query('COMMIT');
 
             // Get updated user points
             const userRes = await client.query('SELECT points FROM users WHERE id = $1', [userId]);
-            res.json({ success: true, points: userRes.rows[0].points });
+            res.json({ success: true, points: userRes.rows[0].points, message: message });
 
         } catch (e) {
             await client.query('ROLLBACK');
