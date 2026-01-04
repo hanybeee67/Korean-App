@@ -413,6 +413,21 @@ h1 {
   box-shadow: 0 4px 10px rgba(44, 62, 80, 0.2);
 }
 
+/* Force High Contrast for Login Button */
+#btn-login {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid white;
+  z-index: 9999;
+}
+
+#btn-login:hover {
+  transform: scale(1.05);
+  background-color: #333 !important;
+}
+
 .btn-help:hover {
   background: #34495e;
   transform: translateY(-2px);
