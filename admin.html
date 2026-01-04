@@ -82,6 +82,64 @@
 </head>
 
 <body>
+    <style>
+        /* ... Existing Styles ... */
+        .admin-lock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            display: none;
+            /* Default hidden, triggered by JS */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+        }
+
+        .admin-lock-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: #333;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .admin-input {
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 1.1rem;
+        }
+
+        .btn-unlock {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+
+    <div id="admin-lock-overlay" class="admin-lock-overlay">
+        <div class="admin-lock-card">
+            <h2>Admin Access</h2>
+            <p>Please enter the administrator password.</p>
+            <input type="password" id="admin-password" class="admin-input" placeholder="Password (비밀번호)">
+            <button onclick="unlockAdmin()" class="btn-unlock">Unlock</button>
+        </div>
+    </div>
+
     <div class="dashboard-header">
         <h1>Everest Manager</h1>
         <button onclick="loadStats()" class="btn-install btn-android" style="font-size:0.9rem;">Refresh Data

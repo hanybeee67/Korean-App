@@ -333,7 +333,49 @@ app.post('/api/monthly_test', async (req, res) => {
 });
 
 // 7. Admin Summary Endpoint
-// 7. Admin Summary Endpoint
+// 7. Admin: Delete User
+app.delete('/api/users/:id', async (req, res) => {
+    const userId = req.params.id;
+    try {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            // Delete related data first (Manual Cascade)
+            await client.query('DELETE FROM daily_logs WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM mission_logs WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM test_results WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM users WHERE id = $1', [userId]);
+            await client.query('COMMIT');
+            res.json({ success: true, message: 'User deleted' });
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Delete User Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to delete user' });
+    }
+});
+
+// 8. Admin: Update User
+app.put('/api/users/:id', async (req, res) => {
+    const userId = req.params.id;
+    const { name, points } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET name = COALESCE($1, name), points = COALESCE($2, points) WHERE id = $3',
+            [name, points, userId]
+        );
+        res.json({ success: true, message: 'User updated' });
+    } catch (err) {
+        console.error('Update User Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to update user' });
+    }
+});
+
+// 9. Admin Summary Endpoint
 app.get('/api/admin/summary', async (req, res) => {
     try {
         const date = new Date();
