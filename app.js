@@ -310,8 +310,12 @@ window.speakText = async function (text, btnElement) {
     const icon = btnElement ? btnElement.querySelector('svg') : null;
     if (icon) icon.style.opacity = '0.5';
 
-    // 1. Try Native Capacitor TTS Plugin (Best for Android 16)
-    if (TextToSpeech) {
+    // 0. Environment Detection
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+    // 1. Try Native Capacitor TTS Plugin (Preferred for stable Android)
+    if (TextToSpeech && !isIOS) { // Skip Native Plugin on iOS to use WebSpeech's better voice control if preferred
         try {
             await TextToSpeech.speak({
                 text: text,
@@ -328,16 +332,13 @@ window.speakText = async function (text, btnElement) {
         }
     }
 
-    // 2. Fallback to Web Speech API
+    // 2. Web Speech API (Primary for iOS & Fallback for Android)
     const synth = getSynth();
     const UtteranceClass = getUtteranceClass();
 
     if (!synth || !UtteranceClass) {
-        const isSecure = window.isSecureContext ? "Secure" : "Not Secure";
-        const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-        const ua = navigator.userAgent;
-
-        alert(`[치명적 오류] 음성 재생 엔진을 찾을 수 없습니다.\n\n[진단 리포트]\n- Context: ${isSecure}\n- Native Plugin: ${!!TextToSpeech}\n- Synth API: ${!!synth}\n- Utterance Class: ${!!UtteranceClass}\n- Mic API: ${hasSR}\n- UA: ${ua}\n\n[해결 방법]\n안드로이드 시스템 웹뷰(WebView) 앱을 최신으로 업데이트해 주세요.`);
+        // ... Error Alert Logic ...
+        alert(`[Error] TTS Engine not found.`);
         if (icon) icon.style.opacity = '1';
         return;
     }
@@ -349,24 +350,39 @@ window.speakText = async function (text, btnElement) {
         try {
             const utterance = new UtteranceClass(text);
             utterance.lang = 'ko-KR';
-            utterance.rate = 0.9;
 
-            // Resilience: Try to find a Korean voice
-            let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
-            if (korVoice) utterance.voice = korVoice;
+            // --- iOS Optimization ---
+            if (isIOS) {
+                // iPhone defaults to a very slow rate for Korean sometimes. Boost it.
+                utterance.rate = 1.1;
+
+                // Voice Selection Strategy for iOS
+                // Try to find high quality Apple voices
+                const voice = voices.find(v => v.name.includes('Yuna') || v.name.includes('Sora') || v.name.includes('Damian') || v.lang === 'ko-KR');
+                if (voice) {
+                    utterance.voice = voice;
+                    // If it's a "Compact" voice, it might be the robotic one. High quality ones usually don't have "Compact" in name sometimes on older iOS.
+                    // But generally picking a specific named one is safer.
+                }
+            } else {
+                // Android / Desktop
+                utterance.rate = 1.0;
+                let korVoice = voices.find(v => v.lang.includes('ko-KR')) || voices.find(v => v.lang.includes('ko'));
+                if (korVoice) utterance.voice = korVoice;
+            }
+            // -------------------------
 
             utterance.onend = () => { if (icon) icon.style.opacity = '1'; };
             utterance.onerror = (e) => {
                 if (e.error !== 'interrupted' && e.error !== 'canceled') {
                     console.error('TTS Error:', e.error);
-                    alert(`재생 오류: ${e.error}`);
                 }
                 if (icon) icon.style.opacity = '1';
             };
 
             synth.speak(utterance);
         } catch (err) {
-            alert('객체 생성 실패: ' + err.message);
+            console.error(err);
             if (icon) icon.style.opacity = '1';
         }
     }, 50);
