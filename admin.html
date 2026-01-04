@@ -130,29 +130,55 @@
                 const section = document.createElement('div');
                 section.className = 'branch-section';
 
-                let tableRows = branches[branchName].map(user => `
+                const users = branches[branchName];
+                let tableRows = users.map(u => {
+                    const lastTime = u.last_attempt ? new Date(u.last_attempt).toLocaleTimeString() : '-';
+
+                    const todayStatus = u.success_count >= 1 ?
+                        '<span class="status-badge badge-success">Done</span>' :
+                        '<span style="color:#bdc3c7;">Waiting</span>';
+
+                    // Payment Logic
+                    const testResult = u.test_result === 'PASS' ?
+                        `<span class="status-badge badge-success">PASS (${u.test_score}점)</span>` :
+                        (u.test_result === 'FAIL' ? `<span class="status-badge badge-fail">FAIL (${u.test_score}점)</span>` : '-');
+
+                    let finalPayment = 0;
+                    let paymentStyle = 'color:#95a5a6;'; // Default gray
+
+                    if (u.test_result === 'PASS') {
+                        finalPayment = u.monthly_points;
+                        paymentStyle = 'color:#2980b9; font-weight:800; font-size:1.05em;'; // Blue bold
+                    } else if (u.test_result === 'FAIL') {
+                        finalPayment = 0;
+                        paymentStyle = 'color:#e74c3c; text-decoration:line-through;'; // Red strike
+                    }
+
+                    return `
                     <tr>
-                        <td style="font-weight:bold;">${user.user_name}</td>
-                        <td>
-                            ${user.success_count > 0 ? `<span class="status-badge badge-success">${user.success_count} Success</span>` : ''}
-                            ${user.fail_count > 0 ? `<span class="status-badge badge-fail">${user.fail_count} Fail</span>` : ''}
-                            ${user.success_count === 0 && user.fail_count === 0 ? '<span style="color:#ccc;">No Attempts</span>' : ''}
-                        </td>
-                        <td style="color:#666; font-size:0.9em;">
-                            ${user.last_attempt ? new Date(user.last_attempt).toLocaleTimeString() : '-'}
-                        </td>
-                    </tr>
-                `).join('');
+                        <td style="font-weight:bold;">${u.user_name}</td>
+                        <td style="text-align:center;">${todayStatus}</td>
+                        <td style="color:#27ae60; font-weight:600;">₩${parseInt(u.today_points || 0).toLocaleString()}</td>
+                        <td style="font-weight:600;">₩${parseInt(u.monthly_points || 0).toLocaleString()}</td>
+                        <td style="text-align:center;">${testResult}</td>
+                        <td style="${paymentStyle}">₩${finalPayment.toLocaleString()}</td>
+                        <td style="color:#7f8c8d; font-size:0.85em;">${lastTime}</td>
+                    </tr>`;
+                }).join('');
 
                 section.innerHTML = `
                     <div class="branch-title">${branchName}</div>
-                    <div class="dashboard-card">
-                        <table>
+                    <div class="dashboard-card" style="overflow-x:auto;">
+                        <table style="min-width:700px;">
                             <thead>
                                 <tr>
-                                    <th>User Name (이름)</th>
-                                    <th>Today's Status (오늘의 현황)</th>
-                                    <th>Last Attempt (마지막 시도)</th>
+                                    <th width="15%">Name</th>
+                                    <th width="10%" style="text-align:center;">Today</th>
+                                    <th width="15%">Today Earned</th>
+                                    <th width="15%">Month Total</th>
+                                    <th width="15%" style="text-align:center;">Test Result</th>
+                                    <th width="15%">Final Payment</th>
+                                    <th width="15%">Last Active</th>
                                 </tr>
                             </thead>
                             <tbody>${tableRows}</tbody>
