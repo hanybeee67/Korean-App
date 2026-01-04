@@ -299,20 +299,32 @@ app.post('/api/monthly_test', async (req, res) => {
 // 7. Admin Summary Endpoint
 app.get('/api/admin/summary', async (req, res) => {
     try {
-        // Daily Stats: Group by Branch -> User
-        const date = new Date().toISOString().split('T')[0]; // Current Date
+        // Admin Summary: Daily Stats + Monthly Financials + Test Results
+        const date = new Date();
+        const year = date.getFullYear();
+        const monthStr = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        const todayStr = date.toISOString().split('T')[0];
 
         const statsQuery = `
             SELECT 
                 b.name as branch_name,
                 u.name as user_name,
-                COUNT(CASE WHEN ml.result = 'success' THEN 1 END) as success_count,
-                COUNT(CASE WHEN ml.result = 'fail' THEN 1 END) as fail_count,
-                MAX(ml.created_at) as last_attempt
+                -- Today's Stats
+                COUNT(CASE WHEN ml.result = 'success' AND DATE(ml.created_at) = CURRENT_DATE THEN 1 END) as success_count,
+                MAX(CASE WHEN ml.result IS NOT NULL AND DATE(ml.created_at) = CURRENT_DATE THEN ml.created_at END) as last_attempt,
+                
+                -- Financials
+                COALESCE((SELECT accumulated_points FROM daily_logs dl WHERE dl.user_id = u.id AND dl.date = CURRENT_DATE), 0) as today_points,
+                COALESCE((SELECT SUM(accumulated_points) FROM daily_logs dl WHERE dl.user_id = u.id AND TO_CHAR(dl.date, 'YYYY-MM') = '${monthStr}'), 0) as monthly_points,
+                
+                -- Monthly Test
+                tr.score as test_score,
+                tr.result as test_result
             FROM users u
             JOIN branches b ON u.branch_id = b.id
             LEFT JOIN mission_logs ml ON u.id = ml.user_id AND DATE(ml.created_at) = CURRENT_DATE
-            GROUP BY b.name, u.name
+            LEFT JOIN test_results tr ON u.id = tr.user_id AND tr.test_month = '${monthStr}'
+            GROUP BY b.name, u.name, u.id, tr.score, tr.result
             ORDER BY b.name, u.name
         `;
 
