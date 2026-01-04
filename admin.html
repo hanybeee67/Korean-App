@@ -335,22 +335,27 @@
                         <td style="text-align:center;">${testResult}</td>
                         <td style="${paymentStyle}">₩${finalPayment.toLocaleString()}</td>
                         <td style="color:#7f8c8d; font-size:0.85em;">${lastTime}</td>
+                        <td style="text-align:center;">
+                            <button onclick="editUser(${u.id}, '${u.user_name}', ${u.monthly_points})" style="padding:4px 8px; cursor:pointer;">✏️</button>
+                            <button onclick="deleteUser(${u.id}, '${u.user_name}')" style="padding:4px 8px; cursor:pointer; color:red;">🗑️</button>
+                        </td>
                     </tr>`;
                 }).join('');
 
                 section.innerHTML = `
                     <div class="branch-title">${branchName}</div>
                     <div class="dashboard-card" style="overflow-x:auto;">
-                        <table style="min-width:700px;">
+                        <table style="min-width:800px;">
                             <thead>
                                 <tr>
-                                    <th width="15%">Name</th>
-                                    <th width="10%" style="text-align:center;">Today</th>
-                                    <th width="15%">Today Earned</th>
-                                    <th width="15%">Month Total</th>
-                                    <th width="15%" style="text-align:center;">Test Result</th>
-                                    <th width="15%">Final Payment</th>
-                                    <th width="15%">Last Active</th>
+                                    <th width="12%">Name</th>
+                                    <th width="8%" style="text-align:center;">Status</th>
+                                    <th width="12%">Today Earned</th>
+                                    <th width="12%">Month Total</th>
+                                    <th width="12%" style="text-align:center;">Test</th>
+                                    <th width="12%">Payment</th>
+                                    <th width="12%">Last Active</th>
+                                    <th width="10%" style="text-align:center;">Manage</th>
                                 </tr>
                             </thead>
                             <tbody>${tableRows}</tbody>
