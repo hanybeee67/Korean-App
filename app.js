@@ -414,7 +414,19 @@ window.startListening = async function (targetText, btnId) {
 
     // 2. 새로운 인스턴스 생성 (아이폰 사파리 안정성 위함)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    // --- Critical Fix for iPhone Freezing: Abort previous instance ---
+    if (window.currentRecognition) {
+        try {
+            window.currentRecognition.abort();
+        } catch (e) { console.warn('Abort error:', e); }
+        window.currentRecognition = null;
+    }
+    // ---------------------------------------------------------------
+
     const recognition = new SpeechRecognition();
+    window.currentRecognition = recognition; // Track current instance
+
     recognition.lang = 'ko-KR';
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -496,8 +508,9 @@ window.startListening = async function (targetText, btnId) {
                 setTimeout(() => document.getElementById('feedback-icon').classList.remove('animate-clap'), 3000);
 
                 // --- Everest Pay Reward Logic ---
-                // FIX: Check against object properly (item.Korean or item if string)
                 if (state.user && state.todayMission.some(m => (m.Korean || m) === targetText)) {
+                    // Pass server message handling in app.js if needed or just handle here?
+                    // Ideally handleMissionSuccess makes the API call and returns the message.
                     handleMissionSuccess(targetText);
                 }
                 // --------------------------------
