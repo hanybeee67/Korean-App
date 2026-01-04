@@ -157,7 +157,74 @@
     <script>
         const BACKEND_URL = 'https://korean-app-for-pay.onrender.com';
 
-        document.addEventListener('DOMContentLoaded', loadStats);
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminAuth();
+            if (sessionStorage.getItem('admin_unlocked')) loadStats();
+        });
+
+        // --- Admin Security ---
+        function checkAdminAuth() {
+            if (!sessionStorage.getItem('admin_unlocked')) {
+                document.getElementById('admin-lock-overlay').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        async function unlockAdmin() {
+            const pwd = document.getElementById('admin-password').value;
+            // Simple check (In real app, use API)
+            if (pwd === '1234') {
+                sessionStorage.setItem('admin_unlocked', 'true');
+                document.getElementById('admin-lock-overlay').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                loadStats();
+            } else {
+                alert('비밀번호가 틀렸습니다.');
+            }
+        }
+
+        // --- Management Actions ---
+        async function deleteUser(id, name) {
+            if (!confirm(`정말 '${name}' 님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/users/${id}`, { method: 'DELETE' });
+                const json = await res.json();
+                if (json.success) {
+                    alert('삭제되었습니다.');
+                    loadStats();
+                } else {
+                    alert('삭제 실패: ' + json.message);
+                }
+            } catch (e) {
+                alert('오류 발생: ' + e.message);
+            }
+        }
+
+        async function editUser(id, currentName, currentPoints) {
+            const newName = prompt('수정할 이름을 입력하세요:', currentName);
+            if (newName === null) return;
+
+            const newPoints = prompt('수정할 포인트를 입력하세요:', currentPoints);
+            if (newPoints === null) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, points: parseInt(newPoints) })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    alert('수정되었습니다.');
+                    loadStats();
+                } else {
+                    alert('수정 실패: ' + json.message);
+                }
+            } catch (e) {
+                alert('오류 발생: ' + e.message);
+            }
+        }
 
         async function loadStats() {
             try {
