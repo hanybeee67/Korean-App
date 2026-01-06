@@ -105,9 +105,10 @@ pool.connect(async (err, client, release) => {
         // 6.1. Migrate Legacy Names
         await client.query(`UPDATE branches SET name = '동탄 롯데백화점점' WHERE name = '동탄점'`);
         await client.query(`UPDATE branches SET name = '하남스타필드점' WHERE name = '하남점'`);
-        await client.query(`UPDATE branches SET name = '하남스타필드점' WHERE name = '스타필드점' ON CONFLICT (name) DO NOTHING`); // Prevent duplicate error if both existed
+        // '스타필드점' is problematic. If '하남스타필드점' already exists, merging is hard without logic.
+        // Instead, we will handle it in the "Cleanup" phase below by moving users.
 
-        // 6.2. Ensure All 9 Branches Exist
+        // 6.2. Define Target Branches (The Only 9 Allowed)
         const targetBranches = [
             '동대문 본점',
             '영등포점',
@@ -120,24 +121,36 @@ pool.connect(async (err, client, release) => {
             '룸비니'
         ];
 
+        // 6.3. Insert Missing Branches
         for (const branchName of targetBranches) {
             await client.query(`INSERT INTO branches (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`, [branchName]);
         }
 
-        // Get '동대문 본점' ID for Admin default (or any default)
-        let branchResult = await client.query(`SELECT id FROM branches WHERE name = '동대문 본점'`);
-        if (branchResult.rows.length === 0) {
-            // Fallback if strictly needed, though loop above should cover it
-            branchResult = await client.query(`SELECT id FROM branches LIMIT 1`);
+        // 6.4. AGGRESSIVE CLEANUP: Remove any branch NOT in the list
+        // First, Ensure '동대문 본점' id is available for fallback
+        const defaultBranchRes = await client.query(`SELECT id FROM branches WHERE name = '동대문 본점'`);
+        const defaultBranchId = defaultBranchRes.rows[0]?.id;
+
+        if (defaultBranchId) {
+            // Find invalid branches
+            const invalidBranchesRes = await client.query(`SELECT id, name FROM branches WHERE name != ALL($1::text[])`, [targetBranches]);
+
+            for (const row of invalidBranchesRes.rows) {
+                console.log(`Cleaning up invalid branch: ${row.name} (Moving users to 동대문 본점)`);
+                // Move users
+                await client.query(`UPDATE users SET branch_id = $1 WHERE branch_id = $2`, [defaultBranchId, row.id]);
+                // Delete branch
+                await client.query(`DELETE FROM branches WHERE id = $1`, [row.id]);
+            }
         }
 
-        if (branchResult.rows.length > 0) {
-            const branchId = branchResult.rows[0].id;
-
+        // 6.5. Admin User Check
+        // Get '동대문 본점' ID again or use defaultBranchId
+        if (defaultBranchId) {
             // Ensure 'admin' exists
             const adminResult = await client.query(`SELECT id FROM users WHERE name = 'admin'`);
             if (adminResult.rows.length === 0) {
-                await client.query(`INSERT INTO users (name, password, branch_id, points) VALUES ('admin', '1234', $1, 1000)`, [branchId]);
+                await client.query(`INSERT INTO users (name, password, branch_id, points) VALUES ('admin', '1234', $1, 1000)`, [defaultBranchId]);
                 console.log('Admin user created successfully');
             } else {
                 await client.query(`UPDATE users SET password = '1234' WHERE name = 'admin'`);
@@ -155,11 +168,30 @@ pool.connect(async (err, client, release) => {
 
 // --- API Endpoints ---
 
-// 1. Get Branches
+// 1. Get Branches (Strict Order 1-9)
 app.get('/api/branches', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name FROM branches ORDER BY id ASC');
-        res.json(result.rows);
+        const result = await pool.query('SELECT id, name FROM branches');
+
+        // Define exact order
+        const order = [
+            '동대문 본점',
+            '영등포점',
+            '굿모닝시티점',
+            '양재점',
+            '수원 영통점',
+            '하남스타필드점',
+            '동탄 롯데백화점점',
+            '마곡 원그로브점',
+            '룸비니'
+        ];
+
+        // Sort in Javascript to guarantee exact sequence
+        const sortedBranches = result.rows.sort((a, b) => {
+            return order.indexOf(a.name) - order.indexOf(b.name);
+        });
+
+        res.json(sortedBranches);
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Failed to fetch branches' });
