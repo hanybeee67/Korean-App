@@ -102,14 +102,33 @@ pool.connect(async (err, client, release) => {
         // -----------------------------------------------------------------------
 
         // 6. Seed Data & Admin Logic Refined
-        // Ensure '동탄점' exists and get its ID
-        await client.query(`INSERT INTO branches (name) VALUES ('동탄점'), ('하남점'), ('영등포점'), ('스타필드점') ON CONFLICT (name) DO NOTHING;`);
+        // 6.1. Migrate Legacy Names
+        await client.query(`UPDATE branches SET name = '동탄 롯데백화점점' WHERE name = '동탄점'`);
+        await client.query(`UPDATE branches SET name = '하남스타필드점' WHERE name = '하남점'`);
+        await client.query(`UPDATE branches SET name = '하남스타필드점' WHERE name = '스타필드점' ON CONFLICT (name) DO NOTHING`); // Prevent duplicate error if both existed
 
-        let branchResult = await client.query(`SELECT id FROM branches WHERE name = '동탄점'`);
-        // Fallback: If for some reason select fails (unlikely), default to null or try inserting again
+        // 6.2. Ensure All 9 Branches Exist
+        const targetBranches = [
+            '동대문 본점',
+            '영등포점',
+            '굿모닝시티점',
+            '양재점',
+            '수원 영통점',
+            '하남스타필드점',
+            '동탄 롯데백화점점',
+            '마곡 원그로브점',
+            '룸비니'
+        ];
+
+        for (const branchName of targetBranches) {
+            await client.query(`INSERT INTO branches (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`, [branchName]);
+        }
+
+        // Get '동대문 본점' ID for Admin default (or any default)
+        let branchResult = await client.query(`SELECT id FROM branches WHERE name = '동대문 본점'`);
         if (branchResult.rows.length === 0) {
-            const insertBranch = await client.query(`INSERT INTO branches (name) VALUES ('동탄점') RETURNING id`);
-            branchResult = insertBranch;
+            // Fallback if strictly needed, though loop above should cover it
+            branchResult = await client.query(`SELECT id FROM branches LIMIT 1`);
         }
 
         if (branchResult.rows.length > 0) {
@@ -411,17 +430,17 @@ app.get('/api/admin/summary', async (req, res) => {
         const userStats = await pool.query(userStatsQuery);
 
         // 2. Branch Rankings (Avg Test Score)
+        // 2. Branch Rankings (Avg Test Score) -> Fix: Log all branches even if no data
         const rankingQuery = `
             SELECT 
                 b.name as branch_name, 
-                ROUND(AVG(tr.score), 1) as avg_score, 
+                COALESCE(ROUND(AVG(tr.score), 1), 0) as avg_score, 
                 COUNT(tr.id) as participant_count
             FROM branches b
-            JOIN users u ON b.id = u.branch_id
-            JOIN test_results tr ON u.id = tr.user_id
-            WHERE tr.test_month = '${monthStr}'
+            LEFT JOIN users u ON b.id = u.branch_id
+            LEFT JOIN test_results tr ON u.id = tr.user_id AND tr.test_month = '${monthStr}'
             GROUP BY b.name
-            ORDER BY avg_score DESC
+            ORDER BY avg_score DESC, b.name ASC
         `;
 
         const rankings = await pool.query(rankingQuery);
