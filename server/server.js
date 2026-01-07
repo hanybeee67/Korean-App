@@ -200,10 +200,23 @@ app.get('/api/branches', async (req, res) => {
 
 // 2. Login
 app.post('/api/login', async (req, res) => {
-    const { name, password, branch_id } = req.body;
+    const { name, password, branch_name, branch_id } = req.body; // Support both for backward compatibility or transition
     try {
-        // Detailed Login Check
-        const userResult = await pool.query('SELECT * FROM users WHERE name = $1 AND branch_id = $2', [name, branch_id]);
+        let userResult;
+
+        // Strategy: Try by branch_name first (Robust), then branch_id (Legacy)
+        if (branch_name) {
+            userResult = await pool.query(`
+                SELECT u.* 
+                FROM users u
+                JOIN branches b ON u.branch_id = b.id
+                WHERE u.name = $1 AND b.name = $2
+            `, [name, branch_name]);
+        } else if (branch_id) {
+            userResult = await pool.query('SELECT * FROM users WHERE name = $1 AND branch_id = $2', [name, branch_id]);
+        } else {
+            return res.status(400).json({ success: false, message: 'Branch information missing' });
+        }
 
         if (userResult.rows.length === 0) {
             return res.status(401).json({ success: false, message: 'User not found in this branch (해당 지점에 계정이 없습니다)' });
@@ -224,11 +237,27 @@ app.post('/api/login', async (req, res) => {
 
 // 2. Register (Optional, for admin usage)
 app.post('/api/register', async (req, res) => {
-    const { name, password, branch_id } = req.body;
+    const { name, password, branch_name, branch_id } = req.body;
     try {
+        let targetBranchId = branch_id;
+
+        // Resolve Branch ID from Name if needed
+        if (!targetBranchId && branch_name) {
+            const branchRes = await pool.query('SELECT id FROM branches WHERE name = $1', [branch_name]);
+            if (branchRes.rows.length > 0) {
+                targetBranchId = branchRes.rows[0].id;
+            } else {
+                return res.status(400).json({ success: false, message: 'Invalid Branch Name' });
+            }
+        }
+
+        if (!targetBranchId) {
+            return res.status(400).json({ success: false, message: 'Branch ID required' });
+        }
+
         const result = await pool.query(
             'INSERT INTO users (name, password, branch_id) VALUES ($1, $2, $3) RETURNING id, name',
-            [name, password, branch_id]
+            [name, password, targetBranchId]
         );
         res.json({ success: true, user: result.rows[0] });
     } catch (err) {

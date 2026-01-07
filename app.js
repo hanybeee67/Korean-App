@@ -562,21 +562,53 @@ async function loadBranches() {
     const select = document.getElementById('login-branch');
     if (!select || select.options.length > 1) return; // Already loaded
 
+    // Fallback Data (Hardcoded 9 Branches)
+    const FALLBACK_BRANCHES = [
+        { id: '1', name: '동대문 본점' },
+        { id: '2', name: '영등포점' },
+        { id: '3', name: '굿모닝시티점' },
+        { id: '4', name: '양재점' },
+        { id: '5', name: '수원 영통점' },
+        { id: '6', name: '하남스타필드점' },
+        { id: '7', name: '동탄 롯데백화점점' },
+        { id: '8', name: '마곡 원그로브점' },
+        { id: '9', name: '룸비니' }
+    ];
+
     try {
         // Add timestamp to prevent caching
-        const res = await fetch(`${BACKEND_URL}/api/branches?t=${new Date().getTime()}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s Timeout
+
+        const res = await fetch(`${BACKEND_URL}/api/branches?t=${new Date().getTime()}`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error('Server response not ok');
+
         const branches = await res.json();
+        if (!branches || branches.length === 0) throw new Error('Empty branch list');
 
         select.innerHTML = '<option value="">Select Branch (지점 선택)</option>';
         branches.forEach(b => {
             const opt = document.createElement('option');
-            opt.value = b.id;
+            opt.value = b.name; // Use NAME as value for robustness (Server now supports it)
+            opt.dataset.id = b.id; // Keep ID in dataset just in case
             opt.textContent = b.name;
             select.appendChild(opt);
         });
     } catch (e) {
-        console.error('Failed to load branches', e);
-        if (select) select.innerHTML = '<option value="">Error loading branches</option>';
+        console.warn('Failed to load branches from server, using fallback.', e);
+
+        // Use Fallback
+        select.innerHTML = '<option value="">Select Branch (지점 선택)</option>';
+        FALLBACK_BRANCHES.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.name; // Use NAME as value
+            opt.textContent = b.name;
+            select.appendChild(opt);
+        });
     }
 }
 
@@ -626,13 +658,27 @@ window.handleAuthSubmit = async function () {
         return;
     }
 
-    const endpoint = currentAuthMode === 'login' ? '/api/login' : '/api/register';
+    // Updated Logic: Send branch_name instead of ID (or both)
+    // The select value is now likely the NAME (from loadBranches update)
+    // If it's an ID (legacy), we might need logic, but our new loadBranches sets value=name.
+
+    // Check if value looks like an ID (numeric) or Name
+    const isNumericId = /^\d+$/.test(branchId);
+
+    const payload = {
+        name,
+        password,
+        // If numeric, send as id. If not, send as name.
+        // Actually, our updated loadBranches sets value = b.name. 
+        // So branchId variable actually holds the NAME.
+        branch_name: branchId
+    };
 
     try {
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, password, branch_id: branchId })
+            body: JSON.stringify(payload)
         });
         const data = await response.json();
 
