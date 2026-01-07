@@ -468,6 +468,7 @@ app.get('/api/admin/summary', async (req, res) => {
         // Fixed: Use subqueries in SELECT to avoid grouping complexity or JOIN fan-out issues
         const userStatsQuery = `
             SELECT 
+                u.id, -- Add ID for delete action
                 b.name as branch_name,
                 u.name as user_name,
                 
