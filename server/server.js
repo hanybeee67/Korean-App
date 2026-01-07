@@ -435,7 +435,8 @@ app.delete('/api/users/:id', async (req, res) => {
         }
     } catch (err) {
         console.error('Delete User Error:', err);
-        res.status(500).json({ success: false, message: 'Failed to delete user' });
+        // Expose error message for debugging
+        res.status(500).json({ success: false, message: 'Failed to delete user: ' + err.message });
     }
 });
 
