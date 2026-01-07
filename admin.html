@@ -185,19 +185,26 @@
 
         // --- Management Actions ---
         async function deleteUser(id, name) {
-            if (!confirm(`정말 '${name}' 님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+            if (!confirm(`정말 '${name}' 님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며, 모든 활동 기록이 지워집니다.`)) return;
 
             try {
                 const res = await fetch(`${BACKEND_URL}/api/users/${id}`, { method: 'DELETE' });
-                const json = await res.json();
-                if (json.success) {
-                    alert('삭제되었습니다.');
-                    loadStats();
+
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success) {
+                        alert(`'${name}' 님이 삭제되었습니다.`);
+                        loadStats();
+                    } else {
+                        alert(`삭제 실패: ${json.message}`);
+                    }
                 } else {
-                    alert('삭제 실패: ' + json.message);
+                    const text = await res.text();
+                    alert(`서버 오류 (${res.status}): ${text}`);
                 }
             } catch (e) {
-                alert('오류 발생: ' + e.message);
+                console.error(e);
+                alert('네트워크 오류 또는 서버 응답 없음: ' + e.message);
             }
         }
 

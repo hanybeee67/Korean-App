@@ -658,20 +658,37 @@ window.handleAuthSubmit = async function () {
         return;
     }
 
-    // Updated Logic: Send branch_name instead of ID (or both)
-    // The select value is now likely the NAME (from loadBranches update)
-    // If it's an ID (legacy), we might need logic, but our new loadBranches sets value=name.
+    const endpoint = currentAuthMode === 'login' ? '/api/login' : '/api/register';
 
-    // Check if value looks like an ID (numeric) or Name
-    const isNumericId = /^\d+$/.test(branchId);
+    // Updated Logic: Send BOTH branch_name and branch_id for maximum compatibility
+    const selectedName = branchSelect.value;
+    let targetBranchId = null;
+
+    // Try to find ID from dataset (if loaded from server)
+    const selectedOption = branchSelect.options[branchSelect.selectedIndex];
+    if (selectedOption && selectedOption.dataset.id) {
+        targetBranchId = selectedOption.dataset.id;
+    } else {
+        // Fallback: Map Name to ID manually
+        const BRANCH_MAP = {
+            '동대문 본점': '1',
+            '영등포점': '2',
+            '굿모닝시티점': '3',
+            '양재점': '4',
+            '수원 영통점': '5',
+            '하남스타필드점': '6',
+            '동탄 롯데백화점점': '7',
+            '마곡 원그로브점': '8',
+            '룸비니': '9'
+        };
+        targetBranchId = BRANCH_MAP[selectedName] || null;
+    }
 
     const payload = {
         name,
         password,
-        // If numeric, send as id. If not, send as name.
-        // Actually, our updated loadBranches sets value = b.name. 
-        // So branchId variable actually holds the NAME.
-        branch_name: branchId
+        branch_name: selectedName,
+        branch_id: targetBranchId // Send explicit ID if found
     };
 
     try {
@@ -717,7 +734,7 @@ window.handleAuthSubmit = async function () {
         }
     } catch (e) {
         console.error(e);
-        msg.textContent = 'Server connection failed.';
+        msg.textContent = 'Server connection failed: ' + e.message;
     }
 };
 
