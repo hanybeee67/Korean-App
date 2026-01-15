@@ -492,19 +492,18 @@ app.get('/api/admin/summary', async (req, res) => {
 
         const userStats = await pool.query(userStatsQuery);
 
-        // 2. Branch Rankings (Avg Test Score)
-        // 2. Branch Rankings (Avg Test Score) -> Fix: Log all branches even if no data
+        // 2. Personal Rankings (Month Score > Activity Count)
         const rankingQuery = `
-            SELECT 
-                b.name as branch_name, 
-                COALESCE(ROUND(AVG(tr.score), 1), 0) as avg_score, 
-                COUNT(tr.id) as participant_count
-            FROM branches b
-            LEFT JOIN users u ON b.id = u.branch_id
-            LEFT JOIN test_results tr ON u.id = tr.user_id AND tr.test_month = '${monthStr}'
-            GROUP BY b.name
-            ORDER BY avg_score DESC, b.name ASC
-        `;
+                SELECT 
+                    u.name as user_name,
+                    b.name as branch_name,
+                    tr.score as test_score,
+                    (SELECT COUNT(*) FROM mission_logs ml WHERE ml.user_id = u.id AND TO_CHAR(ml.created_at, 'YYYY-MM') = '${monthStr}') as activity_count
+                FROM users u
+                JOIN branches b ON u.branch_id = b.id
+                JOIN test_results tr ON u.id = tr.user_id AND tr.test_month = '${monthStr}'
+                ORDER BY tr.score DESC, activity_count DESC, u.name ASC
+            `;
 
         const rankings = await pool.query(rankingQuery);
 

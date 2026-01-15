@@ -256,14 +256,14 @@
 
             let html = `
                 <div class="dashboard-card" style="background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%); border: 1px solid #eee;">
-                    <h3 style="margin-top:0; color:#2c3e50;">🏆 Branch Rankings (Month Test Avg)</h3>
+                    <h3 style="margin-top:0; color:#2c3e50;">🏆 Monthly Personal Rankings</h3>
                     <table>
                         <thead>
                             <tr>
                                 <th width="10%">Rank</th>
-                                <th>Branch</th>
-                                <th>Avg Score</th>
-                                <th>Participants</th>
+                                <th>User (Branch)</th>
+                                <th>Score</th>
+                                <th>Activity</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -278,9 +278,12 @@
                 html += `
                     <tr>
                         <td style="font-size:1.2rem; text-align:center;">${badge}</td>
-                        <td style="font-weight:bold;">${r.branch_name}</td>
-                        <td style="color:#2ecc71; font-weight:800;">${r.avg_score}점</td>
-                        <td>${r.participant_count}명</td>
+                        <td style="font-weight:bold;">
+                            ${r.user_name} 
+                            <span style="font-size:0.8em; color:#7f8c8d; font-weight:normal;">(${r.branch_name})</span>
+                        </td>
+                        <td style="color:#2ecc71; font-weight:800;">${r.test_score}점</td>
+                        <td>${r.activity_count}회</td>
                     </tr>
                 `;
             });
