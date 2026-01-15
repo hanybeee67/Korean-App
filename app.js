@@ -25,6 +25,7 @@ const state = {
     user: null, // { id, name, points, branch_id, pending_points }
     todayMission: [], // Array of indices or items
     missionStatus: {}, // { index: { attempts: 0, completed: false } }
+    dailyHistory: [], // Server-synced history
 };
 
 // Backend URL (Change this to your Render URL in production)
@@ -70,6 +71,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCategories();
     renderCards();
     updateChallengeUI();
+
+    // Auto-Login Check
+    checkAutoLogin();
 
     // Click outside to close menu
     document.addEventListener('click', (e) => {
@@ -704,6 +708,8 @@ window.handleAuthSubmit = async function () {
                 state.user = data.user;
                 // Ensure pending_points is set
                 state.user.pending_points = data.user.pending_points || 0;
+                // Store History
+                state.dailyHistory = data.mission_history || [];
                 msg.textContent = '';
                 document.getElementById('login-name').value = '';
                 document.getElementById('login-pw').value = '';
@@ -719,7 +725,18 @@ window.handleAuthSubmit = async function () {
                 document.getElementById('feedback-title').style.color = '#2ecc71';
                 document.getElementById('feedback-sub').textContent = state.user.name;
                 document.getElementById('feedback-text').textContent = 'Successfully Logged In (로그인 성공)';
+                document.getElementById('feedback-text').textContent = 'Successfully Logged In (로그인 성공)';
                 setTimeout(() => closeModal('feedback-modal'), 2000);
+
+                // SAVE TO LOCAL STORAGE (Auto Login)
+                localStorage.setItem('everest_auth', JSON.stringify({
+                    name: state.user.name,
+                    password: password,
+                    branch_name: state.user.branch_id
+                }));
+                // Wait, we need the params we SENT to login.
+                localStorage.setItem('everest_params', JSON.stringify(payload));
+
             } else {
                 // Register Success -> Switch to login
                 openModal('feedback-modal');
@@ -792,9 +809,26 @@ function updateUserUI() {
             pendingEl = document.createElement('div');
             pendingEl.id = 'user-pending-points';
             pendingEl.style.cssText = 'font-size:0.8rem; color:#e67e22; margin-top:5px; font-weight:bold;';
-            container.appendChild(pendingEl); // Append to profile container
+            container.appendChild(pendingEl);
         }
         pendingEl.textContent = `(Accumulated: ${state.user.pending_points || 0} p)`;
+
+        // Logout Button Check
+        if (!document.getElementById('btn-logout-icon')) {
+            const container = document.getElementById('user-profile');
+            // Assuming container is flex-col, we might want to put logout somewhere else or append it.
+            // Let's replace the big Logout Button strategy if it existed, or add a small icon.
+            // Actually, the original HTML has a profile section? It's dynamically created?
+            // Looking at `updateUserUI` context, `user-profile` is an element.
+
+            // Let's add a Logout Button to the top right of the section
+            const logoutBtn = document.createElement('button');
+            logoutBtn.id = 'btn-logout-icon';
+            logoutBtn.textContent = 'Logout';
+            logoutBtn.style.cssText = 'background:#95a5a6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; margin-top:5px; cursor:pointer;';
+            logoutBtn.onclick = window.logout;
+            container.appendChild(logoutBtn);
+        }
 
         challengeSection.style.display = 'block';
     } else {
@@ -861,10 +895,32 @@ function initDailyChallenge() {
                 </div>
              `;
             container.appendChild(div);
-
-            // Init status tracking using Korean text as key
-            state.missionStatus[item.Korean] = { attempts: 0, completed: false, maxAttempts: 2 };
         });
+
+        // Initialize status tracking
+        state.todayMission.forEach(item => {
+            const text = item.Korean || item;
+            state.missionStatus[text] = { attempts: 0, completed: false, maxAttempts: 2 };
+        });
+
+        // SYNC: Restore State from Server History
+        if (state.dailyHistory && state.dailyHistory.length > 0) {
+            console.log('Restoring Mission State from Server:', state.dailyHistory);
+            state.dailyHistory.forEach(log => {
+                const target = log.sentence;
+                if (state.missionStatus[target]) {
+                    if (log.result === 'success') {
+                        state.missionStatus[target].completed = true;
+                    } else if (log.result === 'fail') {
+                        // Restore max used attempts. If multiple logs exist, this takes the max one.
+                        state.missionStatus[target].attempts = Math.max(state.missionStatus[target].attempts, log.used);
+                    }
+                }
+            });
+        }
+
+        // Refresh UI immediately to reflect restored/synced state
+        updateChallengeUI();
     }
 }
 
@@ -938,7 +994,22 @@ async function handleMissionFailure(targetText) {
         const attemptEl = document.getElementById(`attempts-${index}`);
         if (attemptEl) attemptEl.textContent = attemptsLeft;
 
-        // Check for FAIL condition
+        // Log Failure ALWAYS (Persist attempt count)
+        // This ensures if user reloads, we know how many attempts they used.
+        try {
+            fetch(`${BACKEND_URL}/api/mission_result`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: state.user.id,
+                    sentence: targetText,
+                    result: 'fail',
+                    attempts_used: mission.attempts
+                })
+            }).catch(e => console.error('Log Fail Error (Background)', e));
+        } catch (e) { console.error('Log Fail Error', e); }
+
+        // Check for FAIL condition (Lockout)
         if (attemptsLeft === 0) {
             // Lock UI
             document.getElementById(`status-${index}`).textContent = 'Today\'s Attempts Failed (Try again tomorrow)';
@@ -951,20 +1022,6 @@ async function handleMissionFailure(targetText) {
                 micBtn.style.opacity = '0.5';
                 micBtn.parentElement.innerHTML += '<div style="font-size:0.7rem; color:red; margin-top:5px;">Locked</div>';
             }
-
-            // Log Failure
-            try {
-                await fetch(`${BACKEND_URL}/api/mission_result`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: state.user.id,
-                        sentence: targetText,
-                        result: 'fail',
-                        attempts_used: mission.attempts
-                    })
-                });
-            } catch (e) { console.error('Log Fail Error', e); }
         }
     }
 }
@@ -1165,4 +1222,53 @@ async function finishTest(score, total) {
         }
 
     } catch (e) { console.error(e); }
+}
+
+// Auto Login Function
+async function checkAutoLogin() {
+    const stored = localStorage.getItem('everest_params');
+    if (!stored) return;
+
+    try {
+        const payload = JSON.parse(stored);
+        console.log('Attempting Auto-Login for:', payload.name);
+
+        const response = await fetch(`${BACKEND_URL}/api/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            state.user = data.user;
+            state.user.pending_points = data.user.pending_points || 0;
+            state.dailyHistory = data.mission_history || [];
+
+            updateUserUI();
+            initDailyChallenge();
+            checkAndStartMonthlyTest();
+
+            // Toast
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2ecc71; color:white; padding:10px 20px; border-radius:30px; z-index:9999; font-weight:bold; box-shadow:0 2px 10px rgba(0,0,0,0.2);';
+            msg.textContent = `Welcome back, ${state.user.name}!`;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        } else {
+            console.warn('Auto-login failed (invalid credentials or cleanup), clearing storage.');
+            localStorage.removeItem('everest_params');
+        }
+    } catch (e) {
+        console.error('Auto-login error:', e);
+    }
+}
+
+window.logout = function () {
+    state.user = null;
+    state.todayMission = [];
+    state.dailyHistory = [];
+    localStorage.removeItem('everest_params');
+    updateUserUI();
+    location.reload(); // Clean state reset
 }

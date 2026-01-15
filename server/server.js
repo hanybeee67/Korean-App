@@ -240,7 +240,26 @@ app.post('/api/login', async (req, res) => {
         );
         const pendingPoints = parseInt(pendingRes.rows[0].pending || 0);
 
-        res.json({ success: true, user: { id: user.id, name: user.name, points: user.points, branch_id: user.branch_id, pending_points: pendingPoints } });
+        // Fetch Today's Mission History (To persist attempts/status)
+        const historyQuery = `
+            SELECT sentence, result, MAX(attempts_used) as used 
+            FROM mission_logs 
+            WHERE user_id = $1 AND DATE(created_at) = CURRENT_DATE 
+            GROUP BY sentence, result
+        `;
+        const historyRes = await pool.query(historyQuery, [user.id]);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                points: user.points,
+                branch_id: user.branch_id,
+                pending_points: pendingPoints
+            },
+            mission_history: historyRes.rows
+        });
 
     } catch (err) {
         console.error('Login Error:', err);
