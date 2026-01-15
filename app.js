@@ -725,7 +725,7 @@ window.handleAuthSubmit = async function () {
                 document.getElementById('feedback-title').textContent = 'Registration Complete';
                 document.getElementById('feedback-title').style.color = '#3498db';
                 document.getElementById('feedback-sub').textContent = 'Join Success';
-                document.getElementById('feedback-text').textContent = 'Please Login now (가입 성공! 로그인해주세요)';
+                document.getElementById('feedback-text').textContent = 'Registration Successful! Please login.';
 
                 switchAuthMode('login');
             }
@@ -804,7 +804,7 @@ function initDailyChallenge() {
             [pool[i], pool[j]] = [pool[j], pool[i]];
         }
 
-        state.todayMission = pool.slice(0, 2);
+        state.todayMission = pool.slice(0, 3);
 
         // Render Mission UI
         const container = document.getElementById('challenge-section');
