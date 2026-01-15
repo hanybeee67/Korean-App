@@ -33,7 +33,7 @@ const BACKEND_URL = 'https://korean-app-for-pay.onrender.com';
 
 // Google Sheet Published CSV URL
 // Google Sheet Published CSV URL (Added timestamp to prevent caching)
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo4iD3re1NbdQt7ok1xP41jIOZ_LTBciO7oBWLHaZR7cNajUlTZvlwONDRKIlZlm6UThP8zxDK5pmO/pub?output=csv&t=' + new Date().getTime();
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1Z2a6HhVooEh3uJ-bhdip74PENPLZeC9A/export?format=csv&t=' + new Date().getTime();
 
 // Fallback Data (Internal backup)
 const FALLBACK_DATA = [
