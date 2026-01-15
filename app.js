@@ -22,7 +22,7 @@ const state = {
     activeCategory: 'All',
     isListening: false,
     // New Everest Pay State
-    user: null, // { id, name, points, branch_id }
+    user: null, // { id, name, points, branch_id, pending_points }
     todayMission: [], // Array of indices or items
     missionStatus: {}, // { index: { attempts: 0, completed: false } }
 };
@@ -702,6 +702,8 @@ window.handleAuthSubmit = async function () {
         if (data.success) {
             if (currentAuthMode === 'login') {
                 state.user = data.user;
+                // Ensure pending_points is set
+                state.user.pending_points = data.user.pending_points || 0;
                 msg.textContent = '';
                 document.getElementById('login-name').value = '';
                 document.getElementById('login-pw').value = '';
@@ -782,6 +784,18 @@ function updateUserUI() {
         profile.style.display = 'flex';
         document.getElementById('user-name').textContent = state.user.name;
         document.getElementById('user-points').textContent = state.user.points;
+
+        // Show Pending Points (Create element if not exists)
+        let pendingEl = document.getElementById('user-pending-points');
+        if (!pendingEl) {
+            const container = document.getElementById('user-profile');
+            pendingEl = document.createElement('div');
+            pendingEl.id = 'user-pending-points';
+            pendingEl.style.cssText = 'font-size:0.8rem; color:#e67e22; margin-top:5px; font-weight:bold;';
+            container.appendChild(pendingEl); // Append to profile container
+        }
+        pendingEl.textContent = `(Accumulated: ${state.user.pending_points || 0} p)`;
+
         challengeSection.style.display = 'block';
     } else {
         btnLogin.style.display = 'block';
@@ -892,7 +906,10 @@ async function handleMissionSuccess(targetText) {
             const data = await response.json();
             if (data.success) {
                 state.user.points = data.points;
-                document.getElementById('user-points').textContent = state.user.points;
+                state.user.pending_points = data.pending_points; // Update pending
+                updateUserUI(); // Refresh UI to show new pending amount
+
+                // document.getElementById('user-points').textContent = state.user.points; // Handled by updateUserUI
 
                 const modalTitle = document.getElementById('feedback-title');
                 if (modalTitle && modalTitle.textContent.includes('Welcome')) return; // Dont override login msg
@@ -1113,7 +1130,7 @@ function runTestRecognition(target, btnElement, callback) {
 
 async function finishTest(score, total) {
     const percentage = (score / total) * 100;
-    const isPass = percentage >= 70;
+    const isPass = percentage >= 80; // Changed from 70 to 80
     const result = isPass ? 'PASS' : 'FAIL';
 
     const today = new Date();
@@ -1126,15 +1143,26 @@ async function finishTest(score, total) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: state.user.id, score: percentage, result, month: monthStr })
         });
+        const data = await res.json(); // Get server response with reward info
+
+        // Remove Modal
+        document.getElementById('monthly-test-modal').remove();
+
+        // Final Alert
+        if (isPass) {
+            // Update User State
+            if (data.reward) {
+                state.user.points += data.reward;
+                state.user.pending_points = 0; // Reset pending after payout? 
+                // Actually server doesn't return updated user object, just success. 
+                // Just update locally for UI or reload? 
+                // Let's assume server transaction worked.
+                updateUserUI();
+            }
+            alert(`🎉 TEST PASSED! Score: ${percentage}%.\n\n${data.message}`);
+        } else {
+            alert(`TEST FAILED. Score: ${percentage}%.\n\n${data.message}`);
+        }
+
     } catch (e) { console.error(e); }
-
-    // Remove Modal
-    document.getElementById('monthly-test-modal').remove();
-
-    // Final Alert
-    if (isPass) {
-        alert(`🎉 TEST PASSED! Score: ${percentage}%.\n\nMonthly points awarded.`);
-    } else {
-        alert(`TEST FAILED. Score: ${percentage}%.\n\nPlease study more next month.`);
-    }
 }

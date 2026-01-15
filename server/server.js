@@ -227,7 +227,20 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Incorrect password (비밀번호가 틀렸습니다)' });
         }
 
-        res.json({ success: true, user: { id: user.id, name: user.name, points: user.points, branch_id: user.branch_id } });
+        // Calculate Pending Points (Current Month's Daily Log Sum)
+        const date = new Date();
+        const year = date.getFullYear();
+        const monthStr = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+        const pendingRes = await pool.query(
+            `SELECT SUM(accumulated_points) as pending 
+             FROM daily_logs 
+             WHERE user_id = $1 AND TO_CHAR(date, 'YYYY-MM') = $2`,
+            [user.id, monthStr]
+        );
+        const pendingPoints = parseInt(pendingRes.rows[0].pending || 0);
+
+        res.json({ success: true, user: { id: user.id, name: user.name, points: user.points, branch_id: user.branch_id, pending_points: pendingPoints } });
 
     } catch (err) {
         console.error('Login Error:', err);
@@ -300,27 +313,25 @@ app.post('/api/mission_result', async (req, res) => {
 
                 const successCount = parseInt(todayStats.rows[0].cnt);
 
-                if (successCount === 1) {
-                    // First mission done
-                    message = '다음 문장도 성공하면 150원을 받아요!';
-                } else if (successCount === 2) {
-                    // Second mission done -> Check if reward already given today
+                if (successCount < 3) {
+                    message = `성공! (${successCount}/3) 더 도전해서 150원을 적립하세요!`;
+                } else if (successCount === 3) {
+                    // Third mission done -> Check if reward already given today
                     const checkLog = await client.query(
                         'SELECT * FROM daily_logs WHERE user_id = $1 AND date = CURRENT_DATE',
                         [userId]
                     );
 
                     if (checkLog.rows.length === 0) {
-                        // Grant Reward
+                        // Grant Reward (ACCUMULATE ONLY - Deferred Payment)
                         await client.query('INSERT INTO daily_logs (user_id, accumulated_points) VALUES ($1, $2)', [userId, REWARD_AMOUNT]);
-                        await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
-                        message = '축하합니다! 150원 획득!';
+                        // REMOVED: await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
+
+                        message = '축하합니다! 150원이 적립(유예)되었습니다. 월말 평가 통과 시 지급됩니다!';
                     } else {
-                        // Already rewarded (maybe re-doing 2nd mission?)
                         message = '오늘의 미션을 모두 완료했습니다!';
                     }
                 } else {
-                    // More than 2?
                     message = '오늘의 미션을 모두 완료했습니다!';
                 }
             } else {
@@ -329,9 +340,23 @@ app.post('/api/mission_result', async (req, res) => {
 
             await client.query('COMMIT');
 
-            // Get updated user points
+            // NEW: Get Pending Points for UI update
+            const date = new Date();
+            const year = date.getFullYear();
+            const monthStr = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            const pendingRes = await client.query(
+                `SELECT SUM(accumulated_points) as pending 
+                 FROM daily_logs 
+                 WHERE user_id = $1 AND TO_CHAR(date, 'YYYY-MM') = $2`,
+                [userId, monthStr]
+            );
+            const pendingPoints = parseInt(pendingRes.rows[0].pending || 0);
+
+            // Get updated user points (wallet)
             const userRes = await client.query('SELECT points FROM users WHERE id = $1', [userId]);
-            res.json({ success: true, points: userRes.rows[0].points, message: message });
+
+            res.json({ success: true, points: userRes.rows[0].points, pending_points: pendingPoints, message: message });
 
         } catch (e) {
             await client.query('ROLLBACK');
@@ -397,15 +422,57 @@ app.post('/api/reward', async (req, res) => {
     }
 });
 
-// 6. Monthly Test Submission
+// 6. Monthly Test Submission & Deferred Reward Release
 app.post('/api/monthly_test', async (req, res) => {
-    const { userId, score, result, month } = req.body;
+    const { userId, score, result, month } = req.body; // score is percentage (0-100)
     try {
-        await pool.query(
-            'INSERT INTO test_results (user_id, score, result, test_month) VALUES ($1, $2, $3, $4)',
-            [userId, score, result, month]
-        );
-        res.json({ success: true });
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            await client.query(
+                'INSERT INTO test_results (user_id, score, result, test_month) VALUES ($1, $2, $3, $4)',
+                [userId, score, result, month]
+            );
+
+            let rewardMessage = '';
+            let givenReward = 0;
+
+            // REWARD LOGIC: If Score >= 80 (Pass), Release Pending Points
+            if (score >= 80) {
+                // Calculate Total Pending for this month
+                const pendingRes = await client.query(
+                    `SELECT SUM(accumulated_points) as total 
+                     FROM daily_logs 
+                     WHERE user_id = $1 AND TO_CHAR(date, 'YYYY-MM') = $2`,
+                    [userId, month]
+                );
+                const totalPending = parseInt(pendingRes.rows[0].total || 0);
+
+                if (totalPending > 0) {
+                    // Transfer to Wallet
+                    await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [totalPending, userId]);
+                    givenReward = totalPending;
+                    rewardMessage = `축하합니다! 이번 달 적립금 ${totalPending.toLocaleString()}원이 지급되었습니다.`;
+                } else {
+                    rewardMessage = `통과했습니다! (적립된 금액이 없어 지급되지 않았습니다)`;
+                }
+            } else {
+                // Fail logic: Do nothing? (Points lost effectively as they are never transferred)
+                // Or explicitly mark logs as 'forfeit'? No need really if we query based on date. 
+                // Next month queries next month's logs.
+                rewardMessage = '아쉽게도 불합격입니다. 적립금이 지급되지 않습니다.';
+            }
+
+            await client.query('COMMIT');
+            res.json({ success: true, reward: givenReward, message: rewardMessage });
+
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Test Submit Error' });
