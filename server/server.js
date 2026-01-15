@@ -345,9 +345,9 @@ app.post('/api/mission_result', async (req, res) => {
                     if (checkLog.rows.length === 0) {
                         // Grant Reward (ACCUMULATE ONLY - Deferred Payment)
                         await client.query('INSERT INTO daily_logs (user_id, accumulated_points) VALUES ($1, $2)', [userId, REWARD_AMOUNT]);
-                        // REMOVED: await client.query('UPDATE users SET points = points + $1 WHERE id = $2', [REWARD_AMOUNT, userId]);
 
-                        message = '축하합니다! 150원이 적립(유예)되었습니다. 월말 평가 통과 시 지급됩니다!';
+                        // English Message as requested
+                        message = 'Congratulations! You have accumulated 150 points. (Pending Monthly Test)';
                     } else {
                         message = '오늘의 미션을 모두 완료했습니다!';
                     }
