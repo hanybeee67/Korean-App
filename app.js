@@ -75,6 +75,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Auto-Login Check
     checkAutoLogin();
 
+    // Show Rules Popup (Always on startup)
+    showRulesPopup();
+
     // Click outside to close menu
     document.addEventListener('click', (e) => {
         const wrapper = document.querySelector('.category-wrapper');
@@ -1271,4 +1274,82 @@ window.logout = function () {
     localStorage.removeItem('everest_params');
     updateUserUI();
     location.reload(); // Clean state reset
+}
+
+function showRulesPopup() {
+    // Check if element exists
+    if (document.getElementById('rules-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'rules-modal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 10000;
+        display: flex; justify-content: center; align-items: center;
+        padding: 20px;
+        backdrop-filter: blur(5px);
+    `;
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: linear-gradient(135deg, #ffffff 0%, #f1f2f6 100%);
+        width: 100%; max-width: 450px;
+        border-radius: 20px;
+        padding: 30px 25px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        text-align: left;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.2);
+        animation: fadeInScale 0.4s ease-out;
+    `;
+
+    content.innerHTML = `
+        <style>
+            @keyframes fadeInScale {
+                from { opacity: 0; transform: scale(0.9); }
+                to { opacity: 1; transform: scale(1); }
+            }
+            .rule-item { margin-bottom: 15px; display: flex; align-items: flex-start; }
+            .rule-num { 
+                background: #e74c3c; color: white; width: 24px; height: 24px; 
+                border-radius: 50%; display: flex; justify-content: center; align-items: center; 
+                font-weight: bold; font-size: 0.8rem; margin-right: 12px; flex-shrink: 0; margin-top: 3px;
+            }
+            .rule-text { color: #2c3e50; font-size: 0.95rem; line-height: 1.5; font-family: sans-serif; }
+        </style>
+        <div style="text-align:center; margin-bottom:25px;">
+            <h2 style="margin:0; color:#c0392b; font-size:1.4rem;">एभरेस्ट कोरियन भाषा पाठ<br><span style="font-size:1.1rem; color:#7f8c8d;">(Everest Korean Lesson Rules)</span></h2>
+        </div>
+        
+        <div class="rule-item">
+            <div class="rule-num">1</div>
+            <div class="rule-text">दिनहुँ ३ वटा वाक्यहरू दोहोर्याएर सुन्नुहोस् (🔈) र अभ्यास पछि माइक (🎤) थिचेर बोल्नुहोस्।</div>
+        </div>
+        <div class="rule-item">
+            <div class="rule-num">2</div>
+            <div class="rule-text">प्रत्येक वाक्यमा २ पटक बोल्ने अवसर हुन्छ। सफल भएमा १५० वन जम्मा हुन्छ, तर दुबै प्रयास असफल भएमा आजको कमाइ रद्द हुनेछ।</div>
+        </div>
+        <div class="rule-item">
+            <div class="rule-num">3</div>
+            <div class="rule-text">महिनामा एक पटक मासिक परीक्षा हुन्छ (१० प्रश्न, १ मौका)। ८०% भन्दा बढी अंक ल्याएमा यस महिनाको जम्मा भएको रकम प्राप्त हुन्छ।</div>
+        </div>
+        <div class="rule-item">
+            <div class="rule-num">4</div>
+            <div class="rule-text">हरेक महिना सबै शाखाहरू मध्येबाट (जम्मा पोइन्ट + मासिक परीक्षा) को आधारमा १, २, ३ स्थान छनोट गरी पुरस्कार दिइनेछ।</div>
+        </div>
+
+        <div style="margin-top:30px; text-align:center; font-size:0.9rem; color:#7f8c8d; border-top:1px solid #ddd; padding-top:15px;">
+            सहमत हुन ट्याप गर्नुहोस् (Tap to Agree)
+        </div>
+    `;
+
+    modal.appendChild(content);
+
+    // Close on click
+    modal.onclick = () => {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.remove(), 300);
+    };
+
+    document.body.appendChild(modal);
 }
