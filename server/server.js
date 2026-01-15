@@ -99,6 +99,7 @@ pool.connect(async (err, client, release) => {
         await client.query(`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS result VARCHAR(10);`);
         await client.query(`ALTER TABLE mission_logs ADD COLUMN IF NOT EXISTS result VARCHAR(10);`);
         await client.query(`ALTER TABLE mission_logs ADD COLUMN IF NOT EXISTS sentence TEXT;`);
+        await client.query(`ALTER TABLE mission_logs ADD COLUMN IF NOT EXISTS attempts_used INTEGER DEFAULT 0;`);
         // -----------------------------------------------------------------------
 
         // 6. Seed Data & Admin Logic Refined
