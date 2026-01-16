@@ -75,6 +75,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Auto-Login Check
     checkAutoLogin();
 
+    // Wake Up Server (Render Cold Start Fix)
+    wakeUpServer();
+
     // Show Rules Popup (Always on startup)
     showRulesPopup();
 
@@ -239,6 +242,65 @@ function renderCategories() {
     // Add 'Grid Class' to dropdown for styling
     categoryDropdown.classList.add('grid-layout');
 }
+
+// ==========================================
+// Server Connection Helpers (Render Cold Start)
+// ==========================================
+async function wakeUpServer() {
+    console.log('Sending Wake-Up Signal to Server...');
+    try {
+        // Just a simple ping to root
+        await fetch(BACKEND_URL, { method: 'GET', mode: 'no-cors' });
+        console.log('Server Wake-Up Signal Sent');
+    } catch (e) {
+        console.warn('Wake-Up Signal failed (Network might be down)', e);
+    }
+}
+
+async function monitorPromise(promise, message = 'Connecting to server...') {
+    // Show toast if request takes longer than 2 seconds (Render Spinning Up)
+    let toastId = null;
+
+    const timeoutId = setTimeout(() => {
+        toastId = showToast(`⏳ ${message}\n(무료 서버가 켜지고 있습니다. 최대 1분 소요)`);
+    }, 2000);
+
+    try {
+        const result = await promise;
+        clearTimeout(timeoutId);
+        if (toastId) removeToast(toastId);
+        return result;
+    } catch (e) {
+        clearTimeout(timeoutId);
+        if (toastId) removeToast(toastId);
+        throw e;
+    }
+}
+
+function showToast(msgText, duration = 0) {
+    const id = 'toast-' + Date.now();
+    const msg = document.createElement('div');
+    msg.id = id;
+    msg.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:12px 24px; border-radius:30px; z-index:99999; font-size:0.9rem; text-align:center; white-space:pre-line; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: fadeIn 0.3s ease-out;';
+    msg.textContent = msgText;
+    document.body.appendChild(msg);
+
+    if (duration > 0) {
+        setTimeout(() => removeToast(id), duration);
+    }
+    return id;
+}
+
+function removeToast(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translate(-50%, -20px)';
+        el.style.transition = 'all 0.3s ease';
+        setTimeout(() => el.remove(), 300);
+    }
+}
+
 
 // Global Modal Controls
 window.openModal = function (id) {
@@ -699,11 +761,14 @@ window.handleAuthSubmit = async function () {
     };
 
     try {
-        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+        const fetchPromise = fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+
+        // Use Monitor
+        const response = await monitorPromise(fetchPromise, 'Logging in...');
         const data = await response.json();
 
         if (data.success) {
@@ -1236,11 +1301,13 @@ async function checkAutoLogin() {
         const payload = JSON.parse(stored);
         console.log('Attempting Auto-Login for:', payload.name);
 
-        const response = await fetch(`${BACKEND_URL}/api/login`, {
+        const fetchPromise = fetch(`${BACKEND_URL}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+
+        const response = await monitorPromise(fetchPromise, 'Auto-login reconnecting...');
         const data = await response.json();
 
         if (data.success) {
