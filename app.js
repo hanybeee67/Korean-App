@@ -627,6 +627,18 @@ function compareStrings(s1, s2) {
 
 // 1. Authentication
 // 0. Load Branches
+const BRANCH_ENGLISH_MAP = {
+    '동대문 본점': 'Dongdaemun (Main)',
+    '영등포점': 'Yeongdeungpo',
+    '굿모닝시티점': 'Good Morning City',
+    '양재점': 'Yangjae',
+    '수원 영통점': 'Suwon Yeongtong',
+    '하남스타필드점': 'Hanam Starfield',
+    '동탄 롯데백화점점': 'Dongtan Lotte Dept.',
+    '마곡 원그로브점': 'Magok One Grove',
+    '룸비니': 'Lumbini'
+};
+
 async function loadBranches() {
     const select = document.getElementById('login-branch');
     if (!select || select.options.length > 1) return; // Already loaded
@@ -664,7 +676,8 @@ async function loadBranches() {
             const opt = document.createElement('option');
             opt.value = b.name; // Use NAME as value for robustness (Server now supports it)
             opt.dataset.id = b.id; // Keep ID in dataset just in case
-            opt.textContent = b.name;
+            // Use English Map if available, else fallback to Korean name
+            opt.textContent = BRANCH_ENGLISH_MAP[b.name] || b.name;
             select.appendChild(opt);
         });
     } catch (e) {
@@ -675,7 +688,8 @@ async function loadBranches() {
         FALLBACK_BRANCHES.forEach(b => {
             const opt = document.createElement('option');
             opt.value = b.name; // Use NAME as value
-            opt.textContent = b.name;
+            // Use English Map
+            opt.textContent = BRANCH_ENGLISH_MAP[b.name] || b.name;
             select.appendChild(opt);
         });
     }
